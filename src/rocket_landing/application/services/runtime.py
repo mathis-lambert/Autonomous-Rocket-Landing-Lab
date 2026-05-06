@@ -1,10 +1,12 @@
+"""Runtime helpers for optional acceleration backends."""
+
 from __future__ import annotations
 
 import importlib.util
 
 
 def detect_acceleration_backend() -> str:
-    """Return the best available backend for future ML workloads."""
+    """Return the preferred backend label for future ML workloads."""
 
     if importlib.util.find_spec("torch") is None:
         return "cpu"

@@ -46,3 +46,15 @@ def test_gravity_force_points_downward() -> None:
 
     assert force.x == 0.0
     assert force.z < 0.0
+
+
+def test_positive_theta_pushes_booster_to_the_right() -> None:
+    params = RocketParams()
+    state = State(x=0.0, z=10.0, vx=0.0, vz=0.0, theta=0.1, omega=0.0, fuel=100.0)
+    model = BoosterDynamicsModel(params)
+    action = Action(throttle=1.0, gimbal=0.0)
+    thrust = model.thrust_for(state, action)
+
+    force = model.engine_force_for(state, action, thrust)
+
+    assert force.x > 0.0

@@ -1,3 +1,5 @@
+"""Orchestration layer combining dynamics, integration and contact handling."""
+
 from __future__ import annotations
 
 from rocket_landing.domain.models.action import Action
@@ -26,6 +28,8 @@ class SimulationEngine:
         self._collision_resolver = collision_resolver or GroundContactResolver(params)
 
     def step(self, state: State, action: Action, dt: float) -> StepResult:
+        """Advance the simulation by one step and resolve terminal events."""
+
         update = self.dynamics.evaluate(state, action, dt)
         next_state = self._integrator.integrate(
             state,

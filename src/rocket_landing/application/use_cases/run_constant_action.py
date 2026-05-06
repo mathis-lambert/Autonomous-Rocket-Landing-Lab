@@ -1,3 +1,5 @@
+"""Use case for running non-interactive, constant-command simulations."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -11,6 +13,8 @@ from rocket_landing.domain.simulation.world import SimulationWorld, default_init
 
 @dataclass(frozen=True, slots=True)
 class SimulationRun:
+    """Immutable bundle returned after a scripted simulation run."""
+
     history: SimulationHistory
     final_result: StepResult
     final_time: float
@@ -24,6 +28,8 @@ class RunConstantAction:
         self._dt = dt
 
     def execute(self, *, action: Action, max_steps: int) -> SimulationRun:
+        """Run the world forward until termination or the step budget is reached."""
+
         world = SimulationWorld(
             params=self._params,
             dt=self._dt,

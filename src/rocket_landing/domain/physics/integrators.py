@@ -1,3 +1,5 @@
+"""Numerical integration strategies for the simulation state."""
+
 from __future__ import annotations
 
 from rocket_landing.domain.models.results import ForceVector
@@ -16,6 +18,8 @@ class SemiImplicitEulerIntegrator:
         dt: float,
         fuel: float,
     ) -> State:
+        """Advance the state by one step using semi-implicit Euler integration."""
+
         vx = state.vx + linear_acceleration.x * dt
         vz = state.vz + linear_acceleration.z * dt
         x = state.x + vx * dt

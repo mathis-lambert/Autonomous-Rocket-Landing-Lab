@@ -1,21 +1,39 @@
+"""Replay-oriented pygame application for inspecting scripted trajectories.
+
+Unlike the live application, this client only consumes an already recorded
+history and never mutates the simulation state.
+"""
+
 from __future__ import annotations
 
 import pygame
 
 from rocket_landing.domain.models.params import RocketParams
 from rocket_landing.domain.simulation.history import SimulationHistory
-from rocket_landing.infrastructure.rendering.pygame.hud import HeadsUpDisplay
-from rocket_landing.infrastructure.rendering.pygame.mapper import ScreenMapper, WorldBounds
+from rocket_landing.infrastructure.rendering.pygame.assets import SpriteAssetLoader, SpriteBundle
+from rocket_landing.infrastructure.rendering.pygame.camera import SceneCamera
+from rocket_landing.infrastructure.rendering.pygame.hud import HeadsUpDisplay, HudFonts
 from rocket_landing.infrastructure.rendering.pygame.scene import PygameReplayScene
+from rocket_landing.infrastructure.rendering.pygame.telemetry import HudSnapshot
 from rocket_landing.infrastructure.rendering.pygame.viewport import Viewport
 
 
 class PygameReplayApp:
-    """Interactive replay client separated from the simulation engine itself."""
+    """Interactive replay client separated from the simulation engine itself.
+
+    It provides lightweight transport controls such as reset and resize, making
+    deterministic scenarios easier to inspect visually.
+    """
 
     def __init__(self, params: RocketParams, viewport: Viewport | None = None) -> None:
         self._params = params
         self._viewport = viewport or Viewport()
+        self._asset_loader = SpriteAssetLoader()
+        self._screen: pygame.Surface | None = None
+        self._assets: SpriteBundle | None = None
+        self._scene: PygameReplayScene | None = None
+        self._hud: HeadsUpDisplay | None = None
+        self._fonts: HudFonts | None = None
 
     def run(
         self,
@@ -24,6 +42,8 @@ class PygameReplayApp:
         title: str = "Rocket landing replay",
         playback_speed: float = 1.0,
     ) -> None:
+        """Open a replay window and play a recorded trajectory back in real time."""
+
         if history.is_empty():
             raise ValueError("history must contain at least one state")
         if playback_speed <= 0.0:
@@ -31,14 +51,13 @@ class PygameReplayApp:
 
         pygame.init()
         pygame.display.set_caption(title)
-
-        mapper = ScreenMapper(WorldBounds.from_history(history, self._params), self._viewport)
-        scene = PygameReplayScene(self._params, mapper)
-        hud = HeadsUpDisplay(self._viewport)
-
-        screen = pygame.display.set_mode((self._viewport.width, self._viewport.height))
+        self._screen = pygame.display.set_mode(
+            (self._viewport.width, self._viewport.height),
+            pygame.RESIZABLE,
+        )
+        self._assets = self._asset_loader.load()
+        self._rebuild_runtime()
         clock = pygame.time.Clock()
-        font = pygame.font.SysFont("consolas", 20)
 
         frame_index = 0
         finished = False
@@ -59,6 +78,8 @@ class PygameReplayApp:
                     frame_index = 0
                     accumulator = 0.0
                     finished = False
+                elif event.type == pygame.VIDEORESIZE:
+                    self._handle_resize(event.w, event.h)
 
             if not finished and step_duration > 0.0:
                 while accumulator >= step_duration and frame_index < len(history.states) - 1:
@@ -67,8 +88,65 @@ class PygameReplayApp:
                 if frame_index >= len(history.states) - 1:
                     finished = True
 
-            scene.draw(screen, history, frame_index)
-            hud.draw(screen, font, history, frame_index, playback_speed=playback_speed)
+            screen, scene, hud, fonts = self._require_runtime()
+            state = history.states[frame_index]
+            action = history.actions[frame_index]
+            scene.draw(screen, history, frame_index, dt=dt_seconds)
+            hud.draw(
+                screen,
+                fonts,
+                HudSnapshot.from_session(
+                    params=self._params,
+                    mode="replay",
+                    controller_name="constant action",
+                    state=state,
+                    action=action,
+                    elapsed_time=history.times[frame_index],
+                    status_text="REPLAY" if not finished else "DONE",
+                    steps_label=f"{frame_index}/{len(history.states) - 1}",
+                    paused=False,
+                    extra_lines=[f"playback speed = x{playback_speed:.2f}", "R resets replay"],
+                ),
+            )
             pygame.display.flip()
 
         pygame.quit()
+
+    def _handle_resize(self, width: int, height: int) -> None:
+        """Resize the window and rebuild viewport-dependent renderer objects."""
+
+        self._viewport = self._viewport.resized(width, height)
+        self._screen = pygame.display.set_mode(
+            (self._viewport.width, self._viewport.height),
+            pygame.RESIZABLE,
+        )
+        self._rebuild_runtime()
+
+    def _rebuild_runtime(self) -> None:
+        """Recreate scene and HUD objects that depend on viewport dimensions."""
+
+        if self._assets is None:
+            raise RuntimeError("sprite assets must be loaded before building the runtime")
+
+        self._scene, self._hud, self._fonts = self._create_runtime(self._assets)
+
+    def _require_runtime(
+        self,
+    ) -> tuple[pygame.Surface, PygameReplayScene, HeadsUpDisplay, HudFonts]:
+        """Return fully initialized pygame runtime objects."""
+
+        if self._screen is None or self._scene is None or self._hud is None or self._fonts is None:
+            raise RuntimeError("pygame runtime is not initialized")
+        return self._screen, self._scene, self._hud, self._fonts
+
+    def _create_runtime(
+        self,
+        assets: SpriteBundle,
+    ) -> tuple[PygameReplayScene, HeadsUpDisplay, HudFonts]:
+        """Instantiate the viewport-dependent rendering helpers."""
+
+        camera = SceneCamera(self._params, self._viewport)
+        scene = PygameReplayScene(self._params, self._viewport, assets, camera)
+        hud = HeadsUpDisplay(self._viewport)
+        fonts = HudFonts()
+        return scene, hud, fonts

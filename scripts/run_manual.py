@@ -3,4 +3,6 @@
 from rocket_landing import main
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    """Launch the interactive live session with the manual controller selected."""
+
+    raise SystemExit(main(["session", "--controller", "manual"]))

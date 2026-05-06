@@ -3,4 +3,6 @@
 from rocket_landing.infrastructure.cli.main import main
 
 if __name__ == "__main__":
-    raise SystemExit(main(["--throttle", "0.0"]))
+    """Launch the constant-action demo with zero throttle."""
+
+    raise SystemExit(main(["demo", "--throttle", "0.0"]))

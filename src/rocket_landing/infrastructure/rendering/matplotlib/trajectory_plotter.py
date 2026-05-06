@@ -1,3 +1,5 @@
+"""Matplotlib-based plotting helpers for offline trajectory inspection."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -22,6 +24,8 @@ class MatplotlibTrajectoryPlotter:
         title: str = "Rocket landing trajectory",
         output_path: str | None = None,
     ) -> None:
+        """Render or export a static view of a recorded trajectory."""
+
         if history.is_empty():
             raise ValueError("history must contain at least one state")
 

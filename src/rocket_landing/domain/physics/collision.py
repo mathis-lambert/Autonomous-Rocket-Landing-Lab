@@ -1,3 +1,5 @@
+"""Ground contact rules for deciding landings and crashes."""
+
 from __future__ import annotations
 
 from dataclasses import replace
@@ -14,6 +16,8 @@ class GroundContactResolver:
         self._params = params
 
     def resolve(self, state: State) -> StepResult:
+        """Snap the booster to the ground and classify the contact outcome."""
+
         if state.z > 0.0:
             return StepResult(state=state, terminated=False, landed=False, crashed=False)
 
@@ -29,6 +33,8 @@ class GroundContactResolver:
         )
 
     def _is_soft_landing(self, state: State) -> bool:
+        """Check whether the grounded state satisfies all landing thresholds."""
+
         return (
             abs(state.vz) <= self._params.max_landing_vz
             and abs(state.vx) <= self._params.max_landing_vx

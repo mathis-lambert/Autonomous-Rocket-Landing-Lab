@@ -2,6 +2,11 @@
 
 Minimal 2D booster landing simulator written in Python with `uv`.
 
+## Docs
+
+- [Architecture](ARCHITECTURE.md)
+- [Physics model](docs/physics_model.md)
+
 ## Scope
 
 This first milestone focuses on:
@@ -17,25 +22,31 @@ This first milestone focuses on:
 
 ```powershell
 uv sync
-uv run rocket-landing --throttle 0.85 --gimbal 0.02
+uv run rocket-landing session --controller manual
 ```
 
-Realtime replay window:
+Replay a constant-action scenario:
 
 ```powershell
-uv run rocket-landing --render-mode realtime --playback-speed 1.0
+uv run rocket-landing demo --throttle 0.85 --gimbal 0.02 --render-mode replay --playback-speed 1.0
 ```
 
 Save a figure instead of opening a window:
 
 ```powershell
-uv run rocket-landing --output runs/manual_demo.png
+uv run rocket-landing demo --output runs/manual_demo.png
 ```
 
-Run without any renderer:
+Run the live session with the baseline controller:
 
 ```powershell
-uv run rocket-landing --render-mode none
+uv run rocket-landing session --controller baseline
+```
+
+Run the constant-action demo without any renderer:
+
+```powershell
+uv run rocket-landing demo --render-mode none
 ```
 
 Run the test suite:
