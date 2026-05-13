@@ -31,7 +31,7 @@ class ControlledSimulationSession:
     params: RocketParams
     dt: float
     initial_state: State
-    max_steps: int = 10_000
+    max_steps: int = 50_000
     _world: SimulationWorld = field(init=False, repr=False)
     _history: SimulationHistory = field(init=False, repr=False)
     _step_count: int = field(init=False, default=0)

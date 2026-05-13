@@ -48,6 +48,27 @@ def test_gravity_force_points_downward() -> None:
     assert force.z < 0.0
 
 
+def test_atmospheric_density_decreases_with_altitude() -> None:
+    model = BoosterDynamicsModel(RocketParams())
+
+    sea_level_density = model.atmospheric_density_for(0.0)
+    high_altitude_density = model.atmospheric_density_for(20_000.0)
+
+    assert high_altitude_density < sea_level_density
+    assert high_altitude_density > 0.0
+
+
+def test_drag_force_opposes_velocity() -> None:
+    params = RocketParams(axial_drag_coefficient=0.8, side_drag_coefficient=1.2)
+    state = State(x=0.0, z=500.0, vx=30.0, vz=-40.0, theta=0.0, omega=0.0, fuel=100.0)
+    model = BoosterDynamicsModel(params)
+
+    force = model.aerodynamic_force_for(state)
+
+    assert force.x < 0.0
+    assert force.z > 0.0
+
+
 def test_force_breakdown_sums_engine_and_gravity() -> None:
     params = RocketParams()
     state = State(x=0.0, z=10.0, vx=0.0, vz=0.0, theta=0.0, omega=0.0, fuel=100.0)
@@ -57,8 +78,38 @@ def test_force_breakdown_sums_engine_and_gravity() -> None:
 
     assert forces.engine.x == 0.0
     assert forces.gravity.x == 0.0
+    assert forces.aerodynamic.x == 0.0
+    assert forces.aerodynamic.z == 0.0
     assert forces.total.x == 0.0
-    assert forces.total.z == forces.engine.z + forces.gravity.z
+    assert forces.total.z == forces.engine.z + forces.gravity.z + forces.aerodynamic.z
+
+
+def test_positive_angle_of_attack_creates_restoring_aerodynamic_torque() -> None:
+    params = RocketParams(
+        side_drag_coefficient=1.15,
+        center_of_pressure_offset=7.0,
+        angular_damping_coefficient=0.12,
+    )
+    state = State(x=0.0, z=1_000.0, vx=10.0, vz=60.0, theta=0.4, omega=0.0, fuel=100.0)
+    model = BoosterDynamicsModel(params)
+
+    torque = model.aerodynamic_torque_for(state)
+
+    assert torque < 0.0
+
+
+def test_positive_omega_creates_negative_aerodynamic_damping_torque() -> None:
+    params = RocketParams(
+        side_drag_coefficient=1.15,
+        center_of_pressure_offset=7.0,
+        angular_damping_coefficient=0.12,
+    )
+    state = State(x=0.0, z=1_000.0, vx=0.0, vz=60.0, theta=0.0, omega=0.4, fuel=100.0)
+    model = BoosterDynamicsModel(params)
+
+    torque = model.aerodynamic_torque_for(state)
+
+    assert torque < 0.0
 
 
 def test_positive_theta_pushes_booster_to_the_right() -> None:

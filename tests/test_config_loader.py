@@ -13,6 +13,8 @@ def test_load_default_simulation_config() -> None:
 
     assert config.name == "default_descent"
     assert config.params.gravity == 9.81
+    assert config.params.axial_drag_coefficient == 0.35
+    assert config.params.side_drag_coefficient == 1.15
     assert config.initial_state.z == 120.0
     assert config.initial_state.fuel == 12_000.0
 
@@ -33,6 +35,13 @@ def test_load_custom_simulation_config(tmp_path: Path) -> None:
                 "  max_gimbal: 0.2",
                 "environment:",
                 "  gravity: 1.62",
+                "aerodynamics:",
+                "  air_density_sea_level: 0.02",
+                "  atmosphere_scale_height: 12000.0",
+                "  axial_drag_coefficient: 0.4",
+                "  side_drag_coefficient: 1.3",
+                "  center_of_pressure_offset: 2.5",
+                "  angular_damping_coefficient: 0.07",
                 "landing:",
                 "  max_landing_vz: 2.5",
                 "  max_landing_vx: 1.0",
@@ -56,6 +65,8 @@ def test_load_custom_simulation_config(tmp_path: Path) -> None:
     assert config.name == "test_case"
     assert config.params.max_thrust == 5_000.0
     assert config.params.gravity == 1.62
+    assert config.params.axial_drag_coefficient == 0.4
+    assert config.params.center_of_pressure_offset == 2.5
     assert config.initial_state.x == 10.0
     assert config.initial_state.fuel == 18.0
 
@@ -76,6 +87,13 @@ def test_reject_unknown_config_key(tmp_path: Path) -> None:
                 "  max_gimbal: 0.15",
                 "environment:",
                 "  gravity: 9.81",
+                "aerodynamics:",
+                "  air_density_sea_level: 1.225",
+                "  atmosphere_scale_height: 8500.0",
+                "  axial_drag_coefficient: 0.35",
+                "  side_drag_coefficient: 1.15",
+                "  center_of_pressure_offset: 7.0",
+                "  angular_damping_coefficient: 0.12",
                 "landing:",
                 "  max_landing_vz: 3.0",
                 "  max_landing_vx: 1.5",

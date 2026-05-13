@@ -21,6 +21,7 @@ class ForceBreakdown:
 
     engine: ForceVector
     gravity: ForceVector
+    aerodynamic: ForceVector
     total: ForceVector
 
 

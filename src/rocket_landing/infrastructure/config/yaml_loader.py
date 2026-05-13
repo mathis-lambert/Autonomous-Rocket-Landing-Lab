@@ -23,6 +23,7 @@ _CONFIG_SECTIONS = {
     "description",
     "vehicle",
     "environment",
+    "aerodynamics",
     "landing",
     "initial_state",
 }
@@ -36,6 +37,14 @@ _VEHICLE_FIELDS = {
     "max_gimbal",
 }
 _ENVIRONMENT_FIELDS = {"gravity"}
+_AERODYNAMICS_FIELDS = {
+    "air_density_sea_level",
+    "atmosphere_scale_height",
+    "axial_drag_coefficient",
+    "side_drag_coefficient",
+    "center_of_pressure_offset",
+    "angular_damping_coefficient",
+}
 _LANDING_FIELDS = {
     "max_landing_vz",
     "max_landing_vx",
@@ -86,17 +95,20 @@ def _parse_simulation_config(data: dict[str, Any], *, source_path: Path) -> Simu
 
     vehicle_data = _require_mapping(data, "vehicle", source_path=source_path)
     environment_data = _require_mapping(data, "environment", source_path=source_path)
+    aerodynamics_data = _require_mapping(data, "aerodynamics", source_path=source_path)
     landing_data = _require_mapping(data, "landing", source_path=source_path)
     initial_state_data = _require_mapping(data, "initial_state", source_path=source_path)
 
     _validate_unknown_keys("vehicle", vehicle_data, _VEHICLE_FIELDS)
     _validate_unknown_keys("environment", environment_data, _ENVIRONMENT_FIELDS)
+    _validate_unknown_keys("aerodynamics", aerodynamics_data, _AERODYNAMICS_FIELDS)
     _validate_unknown_keys("landing", landing_data, _LANDING_FIELDS)
     _validate_unknown_keys("initial_state", initial_state_data, _STATE_FIELDS)
 
     params_payload = {
         **vehicle_data,
         **environment_data,
+        **aerodynamics_data,
         **landing_data,
     }
     _validate_missing_keys(

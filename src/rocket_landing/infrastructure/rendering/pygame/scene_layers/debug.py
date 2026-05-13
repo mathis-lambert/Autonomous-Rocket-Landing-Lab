@@ -32,6 +32,7 @@ ORIGIN_RADIUS_PX = 5
 BODY_AXIS_LENGTH_SCALE = 0.7
 BODY_AXIS_WIDTH = 2
 BODY_AXIS_COLOR = (214, 220, 232)
+AERODYNAMIC_VECTOR_COLOR = (106, 175, 255)
 TEXT_SHADOW_COLOR = (0, 0, 0)
 LABEL_OFFSET_X = 10
 LABEL_OFFSET_Y = 8
@@ -64,8 +65,14 @@ class ForceOverlayRenderer:
         mass = self._dynamics.current_mass(state)
         safe_action = self._dynamics.sanitize_action(action)
         thrust = self._dynamics.thrust_for(state, safe_action)
+        density = self._dynamics.atmospheric_density_for(state.z)
+        angle_of_attack = self._dynamics.angle_of_attack_for(state)
+        relative_velocity = self._dynamics.relative_air_velocity_for(state)
+        axial_speed, lateral_speed = self._dynamics.body_velocity_components_for(state)
         forces = self._dynamics.forces_for(state, safe_action)
-        torque = self._dynamics.engine_torque_for(safe_action, thrust)
+        engine_torque = self._dynamics.engine_torque_for(safe_action, thrust)
+        aerodynamic_torque = self._dynamics.aerodynamic_torque_for(state)
+        torque = engine_torque + aerodynamic_torque
         inertia = self._dynamics.moment_of_inertia_for(mass)
         angular_acceleration = torque / inertia if inertia > 0.0 else 0.0
 
@@ -73,6 +80,7 @@ class ForceOverlayRenderer:
         entries = (
             ("THR", forces.engine, self._viewport.accent),
             ("GRV", forces.gravity, self._viewport.warning),
+            ("AERO", forces.aerodynamic, AERODYNAMIC_VECTOR_COLOR),
             ("NET", forces.total, self._viewport.accent_warm),
         )
 
@@ -86,7 +94,14 @@ class ForceOverlayRenderer:
             safe_action,
             mass,
             thrust,
+            density,
+            angle_of_attack,
+            relative_velocity,
+            axial_speed,
+            lateral_speed,
             forces,
+            engine_torque,
+            aerodynamic_torque,
             torque,
             angular_acceleration,
         )
@@ -196,7 +211,14 @@ class ForceOverlayRenderer:
         action: Action,
         mass: float,
         thrust: float,
+        density: float,
+        angle_of_attack: float,
+        relative_velocity: ForceVector,
+        axial_speed: float,
+        lateral_speed: float,
         forces: ForceBreakdown,
+        engine_torque: float,
+        aerodynamic_torque: float,
         torque: float,
         angular_acceleration: float,
     ) -> None:
@@ -206,16 +228,23 @@ class ForceOverlayRenderer:
         lines = [
             ("DEBUG", "PHYSICS"),
             ("mass", f"{mass:,.0f} kg"),
+            ("rho", f"{density:.3f} kg/m3"),
             ("thrust", f"{thrust / 1_000.0:,.1f} kN"),
             ("twr", f"{thrust / max(1.0, mass * self._dynamics.params.gravity):.2f}"),
+            ("v rel", f"{relative_velocity.x:+.1f} / {relative_velocity.z:+.1f} m/s"),
+            ("v body", f"{axial_speed:+.1f} / {lateral_speed:+.1f} m/s"),
             ("acc", f"{forces.total.x / mass:+.2f} / {forces.total.z / mass:+.2f} m/s2"),
             ("torque", f"{torque / 1_000.0:+.1f} kN.m"),
-            ("alpha", f"{angular_acceleration:+.3f} rad/s2"),
+            ("eng tq", f"{engine_torque / 1_000.0:+.1f} kN.m"),
+            ("aero tq", f"{aerodynamic_torque / 1_000.0:+.1f} kN.m"),
+            ("ang acc", f"{angular_acceleration:+.3f} rad/s2"),
             ("theta", f"{math.degrees(state.theta):+.2f} deg"),
+            ("aoa", f"{math.degrees(angle_of_attack):+.2f} deg"),
             ("omega", f"{math.degrees(state.omega):+.2f} deg/s"),
             ("gimbal", f"{math.degrees(action.gimbal):+.2f} deg"),
             ("engine", self._format_force_components(forces.engine)),
             ("gravity", self._format_force_components(forces.gravity)),
+            ("aero", self._format_force_components(forces.aerodynamic)),
             ("net", self._format_force_components(forces.total)),
         ]
 

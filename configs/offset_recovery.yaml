@@ -13,6 +13,14 @@ vehicle:
 environment:
   gravity: 9.81
 
+aerodynamics:
+  air_density_sea_level: 1.225
+  atmosphere_scale_height: 8500.0
+  axial_drag_coefficient: 0.35
+  side_drag_coefficient: 1.15
+  center_of_pressure_offset: 7.0
+  angular_damping_coefficient: 0.12
+
 landing:
   max_landing_vz: 3.0
   max_landing_vx: 1.5
