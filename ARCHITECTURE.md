@@ -139,9 +139,9 @@ Contains explicit project use cases.
 
 Contains non-domain support services.
 
-- `runtime.py`
-  Detects the available acceleration backend for future ML workloads:
-  `cuda`, `mps`, or `cpu`
+- `configuration.py`
+  Defines the resolved simulation configuration model shared by the CLI and
+  scenario loader.
 
 ## `infrastructure` layer
 

@@ -30,7 +30,7 @@ that stays simple where possible, but remains technically useful for:
 
 The final project vision is to support a progression like this:
 
-1. build a robust simulation core with explicit physics and test coverage
+1. build a robust simulation core with explicit physics and strong automated tests
 2. validate the simulator with manual control and baseline autopilots
 3. expose the environment to RL tooling
 4. train landing policies that can handle increasingly difficult scenarios
@@ -111,9 +111,6 @@ src/rocket_landing/
   infrastructure/
     cli/
     rendering/
-scripts/
-  run_manual.py
-  run_freefall.py
 tests/
 ```
 

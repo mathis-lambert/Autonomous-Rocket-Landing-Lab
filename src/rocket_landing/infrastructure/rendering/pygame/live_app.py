@@ -19,7 +19,6 @@ from rocket_landing.infrastructure.rendering.pygame.manual_controller import (
     PygameKeyboardManualController,
 )
 from rocket_landing.infrastructure.rendering.pygame.scene import PygameReplayScene
-from rocket_landing.infrastructure.rendering.pygame.telemetry import HudSnapshot
 from rocket_landing.infrastructure.rendering.pygame.viewport import Viewport
 
 
@@ -100,18 +99,15 @@ class PygameLiveSimulationApp:
             hud.draw(
                 screen,
                 fonts,
-                HudSnapshot.from_session(
-                    params=self._params,
-                    mode="live",
-                    controller_name=self._active_controller.name,
-                    state=self._session.state,
-                    action=action,
-                    elapsed_time=self._session.time,
-                    status_text=self._status_text(),
-                    steps_label=f"{self._session.step_count}/{self._session.max_steps}",
-                    paused=self._paused,
-                    extra_lines=self._hud_lines(),
-                ),
+                mode="live",
+                controller_name=self._active_controller.name,
+                state=self._session.state,
+                action=action,
+                elapsed_time=self._session.time,
+                status_text=self._status_text(),
+                steps_label=f"{self._session.step_count}/{self._session.max_steps}",
+                paused=self._paused,
+                extra_lines=self._hud_lines(),
             )
             pygame.display.flip()
 
@@ -234,6 +230,6 @@ class PygameLiveSimulationApp:
 
         camera = SceneCamera(self._params, self._viewport)
         scene = PygameReplayScene(self._params, self._viewport, assets, camera)
-        hud = HeadsUpDisplay(self._viewport)
-        fonts = HudFonts()
+        hud = HeadsUpDisplay(self._params, self._viewport)
+        fonts = HudFonts.create()
         return scene, hud, fonts

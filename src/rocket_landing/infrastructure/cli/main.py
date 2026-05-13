@@ -11,7 +11,6 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from rocket_landing.application.control.baseline import BaselineLandingController
-from rocket_landing.application.services.runtime import detect_acceleration_backend
 from rocket_landing.application.use_cases.run_constant_action import RunConstantAction
 from rocket_landing.application.use_cases.run_controlled_session import ControlledSimulationSession
 from rocket_landing.domain.models.action import Action
@@ -43,7 +42,6 @@ def _run_constant_action_demo(args: argparse.Namespace) -> int:
     ).execute(action=action, max_steps=args.steps)
     final_state = run.final_result.state
 
-    print(f"Acceleration backend: {detect_acceleration_backend()}")
     print(f"Scenario: {config.name}")
     print(f"Simulation time: {run.final_time:.2f} s")
     print(f"Final position: x={final_state.x:.2f} m, z={final_state.z:.2f} m")
@@ -186,23 +184,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Parse arguments, normalize shortcuts and dispatch to the selected command.
-
-    A few shortcuts are supported for convenience:
-    - no arguments starts an interactive ``session``
-    - leading options without a subcommand are interpreted as ``demo`` options
-    """
-
-    effective_argv = None if argv is None else list(argv)
-    if effective_argv == []:
-        effective_argv = ["session"]
-    elif effective_argv is not None and effective_argv[0].startswith("-"):
-        effective_argv = ["demo", *effective_argv]
+    """Parse arguments and dispatch to the selected command."""
 
     parser = build_parser()
-    args = parser.parse_args(effective_argv)
+    args = parser.parse_args(argv)
     if args.command == "session":
         return _run_live_session(args)
     if args.command == "demo":
         return _run_constant_action_demo(args)
-    raise ValueError(f"unsupported command: {args.command}")
+    parser.error("a subcommand is required")
+    return 2

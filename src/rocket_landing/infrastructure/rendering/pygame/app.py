@@ -14,7 +14,6 @@ from rocket_landing.infrastructure.rendering.pygame.assets import SpriteAssetLoa
 from rocket_landing.infrastructure.rendering.pygame.camera import SceneCamera
 from rocket_landing.infrastructure.rendering.pygame.hud import HeadsUpDisplay, HudFonts
 from rocket_landing.infrastructure.rendering.pygame.scene import PygameReplayScene
-from rocket_landing.infrastructure.rendering.pygame.telemetry import HudSnapshot
 from rocket_landing.infrastructure.rendering.pygame.viewport import Viewport
 
 
@@ -95,18 +94,15 @@ class PygameReplayApp:
             hud.draw(
                 screen,
                 fonts,
-                HudSnapshot.from_session(
-                    params=self._params,
-                    mode="replay",
-                    controller_name="constant action",
-                    state=state,
-                    action=action,
-                    elapsed_time=history.times[frame_index],
-                    status_text="REPLAY" if not finished else "DONE",
-                    steps_label=f"{frame_index}/{len(history.states) - 1}",
-                    paused=False,
-                    extra_lines=[f"playback speed = x{playback_speed:.2f}", "R resets replay"],
-                ),
+                mode="replay",
+                controller_name="constant action",
+                state=state,
+                action=action,
+                elapsed_time=history.times[frame_index],
+                status_text="REPLAY" if not finished else "DONE",
+                steps_label=f"{frame_index}/{len(history.states) - 1}",
+                paused=False,
+                extra_lines=[f"playback speed = x{playback_speed:.2f}", "R resets replay"],
             )
             pygame.display.flip()
 
@@ -147,6 +143,6 @@ class PygameReplayApp:
 
         camera = SceneCamera(self._params, self._viewport)
         scene = PygameReplayScene(self._params, self._viewport, assets, camera)
-        hud = HeadsUpDisplay(self._viewport)
-        fonts = HudFonts()
+        hud = HeadsUpDisplay(self._params, self._viewport)
+        fonts = HudFonts.create()
         return scene, hud, fonts

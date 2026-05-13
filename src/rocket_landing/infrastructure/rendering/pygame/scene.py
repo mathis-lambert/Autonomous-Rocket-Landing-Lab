@@ -12,7 +12,6 @@ import pygame
 
 from rocket_landing.domain.models.params import RocketParams
 from rocket_landing.domain.models.state import State
-from rocket_landing.domain.physics.geometry import BoosterGeometry
 from rocket_landing.domain.simulation.history import SimulationHistory
 from rocket_landing.infrastructure.rendering.pygame.assets import SpriteBundle
 from rocket_landing.infrastructure.rendering.pygame.camera import SceneCamera
@@ -36,10 +35,8 @@ class PygameReplayScene:
         self._viewport = viewport
         self._assets = assets
         self._camera = camera
-        self._geometry = BoosterGeometry(params)
         self._cached_background: pygame.Surface | None = None
         self._cached_background_size: tuple[int, int] | None = None
-        self._time_accumulator = 0.0
 
     def draw(
         self,
@@ -59,7 +56,6 @@ class PygameReplayScene:
         """
 
         state = history.states[frame_index]
-        self._time_accumulator += dt
         self._camera.update(state, max(dt, 1 / 120))
 
         self._draw_background(surface)
