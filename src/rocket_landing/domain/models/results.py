@@ -16,6 +16,15 @@ class ForceVector:
 
 
 @dataclass(frozen=True, slots=True)
+class ForceBreakdown:
+    """Named force components applied to the booster during one physics step."""
+
+    engine: ForceVector
+    gravity: ForceVector
+    total: ForceVector
+
+
+@dataclass(frozen=True, slots=True)
 class StepResult:
     """Outcome of one simulation step after contact resolution."""
 

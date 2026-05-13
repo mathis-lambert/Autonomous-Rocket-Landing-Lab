@@ -28,7 +28,10 @@ WARNING_VERTICAL_SPEED = -4.0
 LOW_FUEL_RATIO = 0.20
 WARNING_FUEL_RATIO = 0.45
 
-HELP_TEXT = "F11 fullscreen   +/- zoom   0 reset zoom   TAB controller   SPACE pause   R reset"
+HELP_TEXT = (
+    "F11 fullscreen   +/- zoom   0 reset zoom   D forces   "
+    "TAB controller   SPACE pause   R reset"
+)
 
 
 class HeadsUpDisplay:
@@ -51,6 +54,7 @@ class HeadsUpDisplay:
         status_text: str,
         steps_label: str,
         paused: bool,
+        debug_forces: bool,
     ) -> None:
         """Render the HUD for the current frame."""
 
@@ -74,6 +78,7 @@ class HeadsUpDisplay:
             elapsed_time=elapsed_time,
             steps_label=steps_label,
             paused=paused,
+            debug_forces=debug_forces,
         )
         self._draw_help_bar(surface, fonts)
 
@@ -121,6 +126,7 @@ class HeadsUpDisplay:
         elapsed_time: float,
         steps_label: str,
         paused: bool,
+        debug_forces: bool,
     ) -> None:
         panel = pygame.Rect(
             self._viewport.width - STATUS_PANEL_WIDTH - HUD_MARGIN,
@@ -146,6 +152,12 @@ class HeadsUpDisplay:
             surface.blit(
                 paused_surface,
                 (panel.right - paused_surface.get_width() - 14, panel.y + 36),
+            )
+        elif debug_forces:
+            debug_surface = fonts.tiny.render("FORCES", True, self._viewport.accent_warm)
+            surface.blit(
+                debug_surface,
+                (panel.right - debug_surface.get_width() - 14, panel.y + 36),
             )
 
     def _draw_help_bar(self, surface: pygame.Surface, fonts: HudFonts) -> None:

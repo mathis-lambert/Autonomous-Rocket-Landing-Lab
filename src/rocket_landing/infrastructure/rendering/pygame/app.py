@@ -34,6 +34,8 @@ class PygameReplayApp:
         self._viewport = viewport or Viewport()
         self._asset_loader = SpriteAssetLoader()
         self._fullscreen = False
+        self._show_force_vectors = False
+        self._force_vector_scale_px_per_kn = 0.065
         self._screen: pygame.Surface | None = None
         self._assets: SpriteBundle | None = None
         self._scene: PygameReplayScene | None = None
@@ -46,6 +48,8 @@ class PygameReplayApp:
         *,
         title: str = "Rocket landing replay",
         playback_speed: float = 1.0,
+        show_force_vectors: bool = False,
+        force_vector_scale_px_per_kn: float = 0.065,
     ) -> None:
         """Open a replay window and play a recorded trajectory back in real time."""
 
@@ -54,6 +58,8 @@ class PygameReplayApp:
         if playback_speed <= 0.0:
             raise ValueError("playback_speed must be strictly positive")
 
+        self._show_force_vectors = show_force_vectors
+        self._force_vector_scale_px_per_kn = force_vector_scale_px_per_kn
         enable_high_dpi()
         pygame.init()
         pygame.display.set_caption(title)
@@ -102,6 +108,12 @@ class PygameReplayApp:
                     and self._scene is not None
                 ):
                     self._scene.reset_zoom()
+                elif (
+                    event.type == pygame.KEYDOWN
+                    and event.key == pygame.K_d
+                    and self._scene is not None
+                ):
+                    self._scene.toggle_force_vectors()
                 elif event.type == pygame.VIDEORESIZE:
                     self._handle_resize(event.w, event.h)
 
@@ -127,6 +139,7 @@ class PygameReplayApp:
                 status_text="REPLAY" if not finished else "DONE",
                 steps_label=f"{frame_index}/{len(history.states) - 1}",
                 paused=False,
+                debug_forces=scene.show_force_vectors,
             )
             pygame.display.flip()
 
@@ -175,7 +188,14 @@ class PygameReplayApp:
         """Instantiate the viewport-dependent rendering helpers."""
 
         camera = SceneCamera(self._params, self._viewport)
-        scene = PygameReplayScene(self._params, self._viewport, assets, camera)
+        scene = PygameReplayScene(
+            self._params,
+            self._viewport,
+            assets,
+            camera,
+            show_force_vectors=self._show_force_vectors,
+            force_vector_scale_px_per_kn=self._force_vector_scale_px_per_kn,
+        )
         hud = HeadsUpDisplay(self._params, self._viewport)
         fonts = HudFonts.create()
         return scene, hud, fonts

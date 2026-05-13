@@ -10,11 +10,13 @@ import pygame
 
 from rocket_landing.domain.models.params import RocketParams
 from rocket_landing.domain.models.state import State
+from rocket_landing.domain.physics.dynamics import BoosterDynamicsModel
 from rocket_landing.domain.simulation.history import SimulationHistory
 from rocket_landing.infrastructure.rendering.pygame.assets import SpriteBundle
 from rocket_landing.infrastructure.rendering.pygame.camera import SceneCamera
 from rocket_landing.infrastructure.rendering.pygame.scene_layers import (
     AtmosphereRenderer,
+    ForceOverlayRenderer,
     GroundRenderer,
     RocketRenderer,
 )
@@ -37,14 +39,24 @@ class PygameReplayScene:
         viewport: Viewport,
         assets: SpriteBundle,
         camera: SceneCamera,
+        *,
+        show_force_vectors: bool = False,
+        force_vector_scale_px_per_kn: float = 0.065,
     ) -> None:
         self._params = params
         self._viewport = viewport
         self._assets = assets
         self._camera = camera
+        self._show_force_vectors = show_force_vectors
         self._atmosphere = AtmosphereRenderer(viewport, assets, camera)
         self._ground = GroundRenderer(viewport, assets, camera)
         self._rocket = RocketRenderer(params, assets, camera)
+        self._force_overlay = ForceOverlayRenderer(
+            viewport,
+            camera,
+            BoosterDynamicsModel(params),
+            scale_px_per_kn=force_vector_scale_px_per_kn,
+        )
 
     def draw(
         self,
@@ -70,7 +82,21 @@ class PygameReplayScene:
         self._ground.draw(surface)
         self._draw_trajectory(surface, history, frame_index)
         self._draw_velocity_vector(surface, state)
-        self._rocket.draw(surface, state, history.actions[frame_index].throttle)
+        action = history.actions[frame_index]
+        if self._show_force_vectors:
+            self._force_overlay.draw(surface, state, action)
+        self._rocket.draw(surface, state, action.throttle)
+
+    @property
+    def show_force_vectors(self) -> bool:
+        """Return whether force debug vectors are currently visible."""
+
+        return self._show_force_vectors
+
+    def toggle_force_vectors(self) -> None:
+        """Toggle debug rendering of the main applied forces."""
+
+        self._show_force_vectors = not self._show_force_vectors
 
     def zoom_in(self) -> None:
         """Zoom the scene camera in."""

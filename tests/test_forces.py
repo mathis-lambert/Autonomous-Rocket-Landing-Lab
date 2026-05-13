@@ -48,6 +48,19 @@ def test_gravity_force_points_downward() -> None:
     assert force.z < 0.0
 
 
+def test_force_breakdown_sums_engine_and_gravity() -> None:
+    params = RocketParams()
+    state = State(x=0.0, z=10.0, vx=0.0, vz=0.0, theta=0.0, omega=0.0, fuel=100.0)
+    model = BoosterDynamicsModel(params)
+
+    forces = model.forces_for(state, Action(throttle=0.5, gimbal=0.0))
+
+    assert forces.engine.x == 0.0
+    assert forces.gravity.x == 0.0
+    assert forces.total.x == 0.0
+    assert forces.total.z == forces.engine.z + forces.gravity.z
+
+
 def test_positive_theta_pushes_booster_to_the_right() -> None:
     params = RocketParams()
     state = State(x=0.0, z=10.0, vx=0.0, vz=0.0, theta=0.1, omega=0.0, fuel=100.0)

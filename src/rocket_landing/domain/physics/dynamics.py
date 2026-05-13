@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from rocket_landing.domain.models.action import Action
 from rocket_landing.domain.models.params import RocketParams
-from rocket_landing.domain.models.results import ForceVector
+from rocket_landing.domain.models.results import ForceBreakdown, ForceVector
 from rocket_landing.domain.models.state import State
 
 
@@ -16,6 +16,7 @@ class DynamicsUpdate:
     """Intermediate physics quantities produced before integration."""
 
     action: Action
+    forces: ForceBreakdown
     linear_acceleration: ForceVector
     angular_acceleration: float
     remaining_fuel: float
@@ -66,17 +67,27 @@ class BoosterDynamicsModel:
 
         return ForceVector(x=0.0, z=-mass * self._params.gravity)
 
-    def total_force_for(self, state: State, action: Action) -> ForceVector:
-        """Sum engine and gravity forces for the current step."""
+    def forces_for(self, state: State, action: Action) -> ForceBreakdown:
+        """Return the named force components applied during the current step."""
 
         safe_action = self.sanitize_action(action)
         thrust = self.thrust_for(state, safe_action)
         engine_force = self.engine_force_for(state, safe_action, thrust)
         gravity_force = self.gravity_force_for(self.current_mass(state))
-        return ForceVector(
+        total_force = ForceVector(
             x=engine_force.x + gravity_force.x,
             z=engine_force.z + gravity_force.z,
         )
+        return ForceBreakdown(
+            engine=engine_force,
+            gravity=gravity_force,
+            total=total_force,
+        )
+
+    def total_force_for(self, state: State, action: Action) -> ForceVector:
+        """Return the net force applied during the current step."""
+
+        return self.forces_for(state, action).total
 
     def moment_of_inertia_for(self, mass: float) -> float:
         """Approximate the booster as a slender rod about its center of mass."""
@@ -101,14 +112,15 @@ class BoosterDynamicsModel:
         safe_action = self.sanitize_action(action)
         mass = self.current_mass(state)
         thrust = self.thrust_for(state, safe_action)
-        total_force = self.total_force_for(state, safe_action)
+        forces = self.forces_for(state, safe_action)
         torque = self.engine_torque_for(safe_action, thrust)
         inertia = self.moment_of_inertia_for(mass)
         return DynamicsUpdate(
             action=safe_action,
+            forces=forces,
             linear_acceleration=ForceVector(
-                x=total_force.x / mass,
-                z=total_force.z / mass,
+                x=forces.total.x / mass,
+                z=forces.total.z / mass,
             ),
             angular_acceleration=torque / inertia,
             remaining_fuel=self.remaining_fuel_for(state, safe_action, dt),

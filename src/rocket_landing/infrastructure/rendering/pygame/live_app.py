@@ -44,6 +44,8 @@ class PygameLiveSimulationApp:
         controllers: list[FlightController],
         active_controller_name: str,
         viewport: Viewport | None = None,
+        show_force_vectors: bool = False,
+        force_vector_scale_px_per_kn: float = 0.065,
     ) -> None:
         if not controllers:
             raise ValueError("controllers must contain at least one controller")
@@ -55,6 +57,8 @@ class PygameLiveSimulationApp:
         self._active_controller_index = self._find_controller_index(active_controller_name)
         self._paused = False
         self._fullscreen = False
+        self._show_force_vectors = show_force_vectors
+        self._force_vector_scale_px_per_kn = force_vector_scale_px_per_kn
         self._asset_loader = SpriteAssetLoader()
         self._screen: pygame.Surface | None = None
         self._assets: SpriteBundle | None = None
@@ -112,6 +116,7 @@ class PygameLiveSimulationApp:
                 status_text=self._status_text(),
                 steps_label=f"{self._session.step_count}/{self._session.max_steps}",
                 paused=self._paused,
+                debug_forces=scene.show_force_vectors,
             )
             pygame.display.flip()
 
@@ -160,6 +165,12 @@ class PygameLiveSimulationApp:
                 and self._scene is not None
             ):
                 self._scene.reset_zoom()
+            elif (
+                event.type == pygame.KEYDOWN
+                and event.key == pygame.K_d
+                and self._scene is not None
+            ):
+                self._scene.toggle_force_vectors()
 
             if isinstance(self._active_controller, PygameKeyboardManualController):
                 self._active_controller.handle_event(event)
@@ -256,7 +267,14 @@ class PygameLiveSimulationApp:
         """Instantiate the viewport-dependent rendering helpers."""
 
         camera = SceneCamera(self._params, self._viewport)
-        scene = PygameReplayScene(self._params, self._viewport, assets, camera)
+        scene = PygameReplayScene(
+            self._params,
+            self._viewport,
+            assets,
+            camera,
+            show_force_vectors=self._show_force_vectors,
+            force_vector_scale_px_per_kn=self._force_vector_scale_px_per_kn,
+        )
         hud = HeadsUpDisplay(self._params, self._viewport)
         fonts = HudFonts.create()
         return scene, hud, fonts

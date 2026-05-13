@@ -32,6 +32,9 @@ def _run_constant_action_demo(args: argparse.Namespace) -> int:
     applied at every simulation step.
     """
 
+    if args.force_vector_scale <= 0.0:
+        raise ValueError("force_vector_scale must be strictly positive")
+
     config = load_simulation_config(args.config)
     params = config.params
     action = Action(throttle=args.throttle, gimbal=args.gimbal)
@@ -55,6 +58,8 @@ def _run_constant_action_demo(args: argparse.Namespace) -> int:
             run.history,
             title="Manual booster simulation",
             playback_speed=args.playback_speed,
+            show_force_vectors=args.debug_forces,
+            force_vector_scale_px_per_kn=args.force_vector_scale,
         )
     elif args.render_mode == "plot" or args.output is not None:
         MatplotlibTrajectoryPlotter(params).render(
@@ -71,6 +76,9 @@ def _run_live_session(args: argparse.Namespace) -> int:
     The live session owns the mutable simulation state while the controllers
     decide which actions to apply at each time step.
     """
+
+    if args.force_vector_scale <= 0.0:
+        raise ValueError("force_vector_scale must be strictly positive")
 
     config = load_simulation_config(args.config)
     params = config.params
@@ -89,6 +97,8 @@ def _run_live_session(args: argparse.Namespace) -> int:
         session,
         controllers=controllers,
         active_controller_name=args.controller,
+        show_force_vectors=args.debug_forces,
+        force_vector_scale_px_per_kn=args.force_vector_scale,
     )
     app.run(title="Rocket landing live session")
     return 0
@@ -154,6 +164,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_CONFIG_PATH,
         help="Scenario YAML to load",
     )
+    demo_parser.add_argument(
+        "--debug-forces",
+        action="store_true",
+        help="Start the replay with force-vector debug overlay enabled",
+    )
+    demo_parser.add_argument(
+        "--force-vector-scale",
+        type=float,
+        default=0.065,
+        help="Debug overlay scale in pixels per kilonewton",
+    )
 
     session_parser = subparsers.add_parser("session", help="Run a live interactive simulation")
     session_parser.add_argument(
@@ -179,6 +200,17 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=DEFAULT_CONFIG_PATH,
         help="Scenario YAML to load",
+    )
+    session_parser.add_argument(
+        "--debug-forces",
+        action="store_true",
+        help="Start the live session with force-vector debug overlay enabled",
+    )
+    session_parser.add_argument(
+        "--force-vector-scale",
+        type=float,
+        default=0.065,
+        help="Debug overlay scale in pixels per kilonewton",
     )
     return parser
 
