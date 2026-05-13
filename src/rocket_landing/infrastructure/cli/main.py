@@ -186,7 +186,7 @@ def build_parser() -> argparse.ArgumentParser:
     session_parser.add_argument(
         "--steps",
         type=int,
-        default=10_000,
+        default=50_000,
         help="Maximum number of simulation steps before auto-stop",
     )
     session_parser.add_argument(
