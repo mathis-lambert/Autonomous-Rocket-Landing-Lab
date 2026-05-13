@@ -5,7 +5,7 @@ vehicle:
   dry_mass: 22000.0
   initial_fuel: 12000.0
   max_thrust: 900000.0
-  fuel_flow_rate: 180.0
+  fuel_flow_rate: 80.0
   length: 24.0
   radius: 1.8
   max_gimbal: 0.15
