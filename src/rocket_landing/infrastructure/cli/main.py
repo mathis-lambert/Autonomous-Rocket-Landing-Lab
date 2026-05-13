@@ -8,13 +8,14 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Sequence
+from pathlib import Path
 
 from rocket_landing.application.control.baseline import BaselineLandingController
 from rocket_landing.application.services.runtime import detect_acceleration_backend
 from rocket_landing.application.use_cases.run_constant_action import RunConstantAction
 from rocket_landing.application.use_cases.run_controlled_session import ControlledSimulationSession
 from rocket_landing.domain.models.action import Action
-from rocket_landing.domain.models.params import RocketParams
+from rocket_landing.infrastructure.config import DEFAULT_CONFIG_PATH, load_simulation_config
 from rocket_landing.infrastructure.rendering.matplotlib.trajectory_plotter import (
     MatplotlibTrajectoryPlotter,
 )
@@ -32,12 +33,18 @@ def _run_constant_action_demo(args: argparse.Namespace) -> int:
     applied at every simulation step.
     """
 
-    params = RocketParams()
+    config = load_simulation_config(args.config)
+    params = config.params
     action = Action(throttle=args.throttle, gimbal=args.gimbal)
-    run = RunConstantAction(params, args.dt).execute(action=action, max_steps=args.steps)
+    run = RunConstantAction(
+        params,
+        args.dt,
+        initial_state=config.initial_state,
+    ).execute(action=action, max_steps=args.steps)
     final_state = run.final_result.state
 
     print(f"Acceleration backend: {detect_acceleration_backend()}")
+    print(f"Scenario: {config.name}")
     print(f"Simulation time: {run.final_time:.2f} s")
     print(f"Final position: x={final_state.x:.2f} m, z={final_state.z:.2f} m")
     print(f"Final velocity: vx={final_state.vx:.2f} m/s, vz={final_state.vz:.2f} m/s")
@@ -67,8 +74,14 @@ def _run_live_session(args: argparse.Namespace) -> int:
     decide which actions to apply at each time step.
     """
 
-    params = RocketParams()
-    session = ControlledSimulationSession(params=params, dt=args.dt, max_steps=args.steps)
+    config = load_simulation_config(args.config)
+    params = config.params
+    session = ControlledSimulationSession(
+        params=params,
+        dt=args.dt,
+        initial_state=config.initial_state,
+        max_steps=args.steps,
+    )
     controllers = [
         PygameKeyboardManualController(params),
         BaselineLandingController(params),
@@ -137,6 +150,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=1.0,
         help="Playback speed multiplier used by the replay renderer",
     )
+    demo_parser.add_argument(
+        "--config",
+        type=Path,
+        default=DEFAULT_CONFIG_PATH,
+        help="Scenario YAML to load",
+    )
 
     session_parser = subparsers.add_parser("session", help="Run a live interactive simulation")
     session_parser.add_argument(
@@ -156,6 +175,12 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("manual", "baseline"),
         default="manual",
         help="Initial controller used by the live session",
+    )
+    session_parser.add_argument(
+        "--config",
+        type=Path,
+        default=DEFAULT_CONFIG_PATH,
+        help="Scenario YAML to load",
     )
     return parser
 

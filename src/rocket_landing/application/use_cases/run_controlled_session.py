@@ -14,7 +14,7 @@ from rocket_landing.domain.models.params import RocketParams
 from rocket_landing.domain.models.results import StepResult
 from rocket_landing.domain.models.state import State
 from rocket_landing.domain.simulation.history import SimulationHistory
-from rocket_landing.domain.simulation.world import SimulationWorld, default_initial_state
+from rocket_landing.domain.simulation.world import SimulationWorld
 
 
 @dataclass(slots=True)
@@ -30,15 +30,18 @@ class ControlledSimulationSession:
 
     params: RocketParams
     dt: float
+    initial_state: State
     max_steps: int = 10_000
     _world: SimulationWorld = field(init=False, repr=False)
     _history: SimulationHistory = field(init=False, repr=False)
     _step_count: int = field(init=False, default=0)
     _last_result: StepResult | None = field(init=False, default=None)
+    _default_initial_state: State = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         """Initialize the internal world and trajectory buffers."""
 
+        self._default_initial_state = self.initial_state
         self.reset()
 
     @property
@@ -83,11 +86,11 @@ class ControlledSimulationSession:
         """Reset the session to a provided or default initial state.
 
         Args:
-            initial_state: Optional explicit spawn state.  When omitted, the
-                project's default initial descent state is used.
+            initial_state: Optional explicit spawn state. When omitted, the
+                session resets to the scenario state provided at construction.
         """
 
-        start_state = initial_state or default_initial_state(self.params)
+        start_state = initial_state or self._default_initial_state
         self._world = SimulationWorld(params=self.params, dt=self.dt, state=start_state)
         self._history = SimulationHistory()
         self._history.append(

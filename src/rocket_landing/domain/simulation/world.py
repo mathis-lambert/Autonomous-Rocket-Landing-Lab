@@ -33,17 +33,3 @@ class SimulationWorld:
         self.state = result.state
         self.time += self.dt
         return result
-
-
-def default_initial_state(params: RocketParams) -> State:
-    """Return the default spawn state used by demos and interactive sessions."""
-
-    return State(
-        x=0.0,
-        z=120.0,
-        vx=0.0,
-        vz=-15.0,
-        theta=0.0,
-        omega=0.0,
-        fuel=params.initial_fuel,
-    )

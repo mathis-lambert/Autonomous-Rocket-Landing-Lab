@@ -66,6 +66,12 @@ Run the live session with the baseline controller:
 uv run rocket-landing session --controller baseline
 ```
 
+Run a tweaked scenario from a YAML file:
+
+```bash
+uv run rocket-landing session --controller baseline --config configs/offset_recovery.yaml
+```
+
 Replay a constant-action scenario:
 
 ```bash
@@ -110,3 +116,16 @@ scripts/
   run_freefall.py
 tests/
 ```
+
+## Configuration
+
+Simulation scenarios live in `configs/` and are defined in YAML.
+
+Each scenario currently separates:
+
+- `vehicle`
+- `environment`
+- `landing`
+- `initial_state`
+
+The CLI loads `configs/default.yaml` when no explicit `--config` is provided.
