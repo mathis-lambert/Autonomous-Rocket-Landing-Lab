@@ -45,8 +45,6 @@ class BaselineLandingController(FlightController):
 
     def __init__(self, params: RocketParams) -> None:
         self._params = params
-        self._last_target_theta = 0.0
-        self._last_target_vz = 0.0
 
     @property
     def name(self) -> str:
@@ -57,8 +55,7 @@ class BaselineLandingController(FlightController):
     def reset(self, state: State) -> None:
         """Reset cached targets when a new episode starts."""
 
-        self._last_target_theta = 0.0
-        self._last_target_vz = self._desired_vertical_speed(state)
+        del state
 
     def compute_action(self, state: State, dt: float) -> Action:
         """Compute a stabilizing throttle and gimbal command.
@@ -84,21 +81,7 @@ class BaselineLandingController(FlightController):
             + (ATTITUDE_FEEDFORWARD_GAIN * abs(target_theta))
         )
         throttle = self._clamp(throttle, 0.0, 1.0)
-
-        self._last_target_theta = target_theta
-        self._last_target_vz = target_vz
         return Action(throttle=throttle, gimbal=gimbal)
-
-    def status_lines(self) -> list[str]:
-        """Return short HUD lines explaining the controller's current intent."""
-
-        return [
-            (
-                f"controller = baseline   target_theta = {self._last_target_theta:6.3f} rad   "
-                f"target_vz = {self._last_target_vz:6.2f} m/s"
-            ),
-            "logic: stronger attitude damping, smoother throttle law tuned for higher thrust",
-        ]
 
     def _desired_theta(self, state: State) -> float:
         """Turn horizontal position and drift into an attitude target."""

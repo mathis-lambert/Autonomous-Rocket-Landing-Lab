@@ -18,9 +18,9 @@ class RocketParams:
 
     gravity: float = 9.81
     dry_mass: float = 22_000.0
-    initial_fuel: float = 8_000.0
-    max_thrust: float = 650_000.0
-    fuel_flow_rate: float = 120.0
+    initial_fuel: float = 12_000.0
+    max_thrust: float = 900_000.0
+    fuel_flow_rate: float = 180.0
     length: float = 24.0
     radius: float = 1.8
     max_gimbal: float = 0.15

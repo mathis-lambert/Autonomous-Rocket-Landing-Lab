@@ -12,6 +12,11 @@ from rocket_landing.domain.models.params import RocketParams
 from rocket_landing.domain.simulation.history import SimulationHistory
 from rocket_landing.infrastructure.rendering.pygame.assets import SpriteAssetLoader, SpriteBundle
 from rocket_landing.infrastructure.rendering.pygame.camera import SceneCamera
+from rocket_landing.infrastructure.rendering.pygame.display import (
+    create_display,
+    desktop_viewport,
+    enable_high_dpi,
+)
 from rocket_landing.infrastructure.rendering.pygame.hud import HeadsUpDisplay, HudFonts
 from rocket_landing.infrastructure.rendering.pygame.scene import PygameReplayScene
 from rocket_landing.infrastructure.rendering.pygame.viewport import Viewport
@@ -28,6 +33,7 @@ class PygameReplayApp:
         self._params = params
         self._viewport = viewport or Viewport()
         self._asset_loader = SpriteAssetLoader()
+        self._fullscreen = False
         self._screen: pygame.Surface | None = None
         self._assets: SpriteBundle | None = None
         self._scene: PygameReplayScene | None = None
@@ -48,12 +54,11 @@ class PygameReplayApp:
         if playback_speed <= 0.0:
             raise ValueError("playback_speed must be strictly positive")
 
+        enable_high_dpi()
         pygame.init()
         pygame.display.set_caption(title)
-        self._screen = pygame.display.set_mode(
-            (self._viewport.width, self._viewport.height),
-            pygame.RESIZABLE,
-        )
+        self._viewport = desktop_viewport(self._viewport)
+        self._screen, self._viewport = create_display(self._viewport, fullscreen=self._fullscreen)
         self._assets = self._asset_loader.load()
         self._rebuild_runtime()
         clock = pygame.time.Clock()
@@ -77,6 +82,26 @@ class PygameReplayApp:
                     frame_index = 0
                     accumulator = 0.0
                     finished = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                    self._toggle_fullscreen()
+                elif (
+                    event.type == pygame.KEYDOWN
+                    and event.key in (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS)
+                    and self._scene is not None
+                ):
+                    self._scene.zoom_in()
+                elif (
+                    event.type == pygame.KEYDOWN
+                    and event.key in (pygame.K_MINUS, pygame.K_UNDERSCORE, pygame.K_KP_MINUS)
+                    and self._scene is not None
+                ):
+                    self._scene.zoom_out()
+                elif (
+                    event.type == pygame.KEYDOWN
+                    and event.key == pygame.K_0
+                    and self._scene is not None
+                ):
+                    self._scene.reset_zoom()
                 elif event.type == pygame.VIDEORESIZE:
                     self._handle_resize(event.w, event.h)
 
@@ -102,7 +127,6 @@ class PygameReplayApp:
                 status_text="REPLAY" if not finished else "DONE",
                 steps_label=f"{frame_index}/{len(history.states) - 1}",
                 paused=False,
-                extra_lines=[f"playback speed = x{playback_speed:.2f}", "R resets replay"],
             )
             pygame.display.flip()
 
@@ -111,11 +135,20 @@ class PygameReplayApp:
     def _handle_resize(self, width: int, height: int) -> None:
         """Resize the window and rebuild viewport-dependent renderer objects."""
 
+        if self._fullscreen:
+            return
+
         self._viewport = self._viewport.resized(width, height)
-        self._screen = pygame.display.set_mode(
-            (self._viewport.width, self._viewport.height),
-            pygame.RESIZABLE,
-        )
+        self._screen, self._viewport = create_display(self._viewport, fullscreen=self._fullscreen)
+        self._rebuild_runtime()
+
+    def _toggle_fullscreen(self) -> None:
+        """Toggle between native desktop fullscreen and a high-resolution window."""
+
+        self._fullscreen = not self._fullscreen
+        if not self._fullscreen:
+            self._viewport = desktop_viewport(self._viewport)
+        self._screen, self._viewport = create_display(self._viewport, fullscreen=self._fullscreen)
         self._rebuild_runtime()
 
     def _rebuild_runtime(self) -> None:

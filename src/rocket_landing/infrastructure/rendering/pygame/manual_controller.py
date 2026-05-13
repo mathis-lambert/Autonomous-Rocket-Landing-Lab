@@ -90,20 +90,6 @@ class PygameKeyboardManualController(FlightController):
         del state, dt
         return Action(throttle=self._throttle, gimbal=self._gimbal)
 
-    def status_lines(self) -> list[str]:
-        """Return short manual-control hints for the HUD footer."""
-
-        return [
-            (
-                f"controller = manual   throttle = {self._throttle:4.2f}   "
-                f"gimbal = {self._gimbal:6.3f} rad   precision = {self._precision_mode}"
-            ),
-            (
-                "controls: [W/Up][S/Down] throttle  [A/Left][D/Right] gimbal  "
-                "[Shift] precision  [Z] +15%  [F] -15%  [X] cut  [C] center"
-            ),
-        ]
-
     @staticmethod
     def _clamp(value: float, low: float, high: float) -> float:
         """Clamp a scalar between the provided bounds."""

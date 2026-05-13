@@ -21,8 +21,8 @@ class HudFonts:
         """Build the font palette used by the HUD."""
 
         return cls(
-            title=pygame.font.SysFont("consolas", 28, bold=True),
-            metric=pygame.font.SysFont("consolas", 26, bold=True),
-            small=pygame.font.SysFont("consolas", 18, bold=True),
-            tiny=pygame.font.SysFont("consolas", 14, bold=True),
+            title=pygame.font.SysFont("consolas", 20, bold=True),
+            metric=pygame.font.SysFont("consolas", 18, bold=True),
+            small=pygame.font.SysFont("consolas", 15, bold=True),
+            tiny=pygame.font.SysFont("consolas", 13, bold=True),
         )

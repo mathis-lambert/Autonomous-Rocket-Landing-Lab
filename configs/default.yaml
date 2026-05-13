@@ -3,9 +3,9 @@ description: Standard vertical descent setup used by the CLI by default.
 
 vehicle:
   dry_mass: 22000.0
-  initial_fuel: 8000.0
-  max_thrust: 650000.0
-  fuel_flow_rate: 120.0
+  initial_fuel: 12000.0
+  max_thrust: 900000.0
+  fuel_flow_rate: 180.0
   length: 24.0
   radius: 1.8
   max_gimbal: 0.15
@@ -26,4 +26,4 @@ initial_state:
   vz: -15.0
   theta: 0.0
   omega: 0.0
-  fuel: 8000.0
+  fuel: 12000.0

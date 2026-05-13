@@ -14,6 +14,11 @@ from rocket_landing.application.use_cases.run_controlled_session import Controll
 from rocket_landing.domain.models.params import RocketParams
 from rocket_landing.infrastructure.rendering.pygame.assets import SpriteAssetLoader, SpriteBundle
 from rocket_landing.infrastructure.rendering.pygame.camera import SceneCamera
+from rocket_landing.infrastructure.rendering.pygame.display import (
+    create_display,
+    desktop_viewport,
+    enable_high_dpi,
+)
 from rocket_landing.infrastructure.rendering.pygame.hud import HeadsUpDisplay, HudFonts
 from rocket_landing.infrastructure.rendering.pygame.manual_controller import (
     PygameKeyboardManualController,
@@ -49,6 +54,7 @@ class PygameLiveSimulationApp:
         self._viewport = viewport or Viewport()
         self._active_controller_index = self._find_controller_index(active_controller_name)
         self._paused = False
+        self._fullscreen = False
         self._asset_loader = SpriteAssetLoader()
         self._screen: pygame.Surface | None = None
         self._assets: SpriteBundle | None = None
@@ -63,13 +69,12 @@ class PygameLiveSimulationApp:
         advances with the fixed ``dt`` configured in the session.
         """
 
+        enable_high_dpi()
         pygame.init()
         pygame.display.set_caption(title)
 
-        self._screen = pygame.display.set_mode(
-            (self._viewport.width, self._viewport.height),
-            pygame.RESIZABLE,
-        )
+        self._viewport = desktop_viewport(self._viewport)
+        self._screen, self._viewport = create_display(self._viewport, fullscreen=self._fullscreen)
         self._assets = self._asset_loader.load()
         clock = pygame.time.Clock()
         self._rebuild_runtime()
@@ -107,7 +112,6 @@ class PygameLiveSimulationApp:
                 status_text=self._status_text(),
                 steps_label=f"{self._session.step_count}/{self._session.max_steps}",
                 paused=self._paused,
-                extra_lines=self._hud_lines(),
             )
             pygame.display.flip()
 
@@ -136,6 +140,26 @@ class PygameLiveSimulationApp:
                 self._reset_session()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
                 self._cycle_controller()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                self._toggle_fullscreen()
+            elif (
+                event.type == pygame.KEYDOWN
+                and event.key in (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS)
+                and self._scene is not None
+            ):
+                self._scene.zoom_in()
+            elif (
+                event.type == pygame.KEYDOWN
+                and event.key in (pygame.K_MINUS, pygame.K_UNDERSCORE, pygame.K_KP_MINUS)
+                and self._scene is not None
+            ):
+                self._scene.zoom_out()
+            elif (
+                event.type == pygame.KEYDOWN
+                and event.key == pygame.K_0
+                and self._scene is not None
+            ):
+                self._scene.reset_zoom()
 
             if isinstance(self._active_controller, PygameKeyboardManualController):
                 self._active_controller.handle_event(event)
@@ -144,11 +168,20 @@ class PygameLiveSimulationApp:
     def _handle_resize(self, width: int, height: int) -> None:
         """Resize the window and rebuild viewport-dependent renderer state."""
 
+        if self._fullscreen:
+            return
+
         self._viewport = self._viewport.resized(width, height)
-        self._screen = pygame.display.set_mode(
-            (self._viewport.width, self._viewport.height),
-            pygame.RESIZABLE,
-        )
+        self._screen, self._viewport = create_display(self._viewport, fullscreen=self._fullscreen)
+        self._rebuild_runtime()
+
+    def _toggle_fullscreen(self) -> None:
+        """Toggle between native desktop fullscreen and a high-resolution window."""
+
+        self._fullscreen = not self._fullscreen
+        if not self._fullscreen:
+            self._viewport = desktop_viewport(self._viewport)
+        self._screen, self._viewport = create_display(self._viewport, fullscreen=self._fullscreen)
         self._rebuild_runtime()
 
     def _update_manual_input(self, frame_dt: float) -> None:
@@ -180,12 +213,6 @@ class PygameLiveSimulationApp:
             if controller.name == name:
                 return index
         raise ValueError(f"unknown controller: {name}")
-
-    def _hud_lines(self) -> list[str]:
-        """Build extra HUD lines shared by all live-session frames."""
-
-        control_line = "TAB switch controller   SPACE pause   R reset   ESC quit"
-        return [control_line, *self._active_controller.status_lines()]
 
     def _status_text(self) -> str:
         """Derive a short human-readable flight status for the HUD."""

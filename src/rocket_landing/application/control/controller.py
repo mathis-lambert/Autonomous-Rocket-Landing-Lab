@@ -23,8 +23,3 @@ class FlightController(ABC):
     @abstractmethod
     def compute_action(self, state: State, dt: float) -> Action:
         """Return the next control action for the current simulation state."""
-
-    def status_lines(self) -> list[str]:
-        """Optional short controller-specific HUD lines."""
-
-        return []

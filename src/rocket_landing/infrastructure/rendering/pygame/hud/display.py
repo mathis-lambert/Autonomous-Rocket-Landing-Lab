@@ -1,4 +1,4 @@
-"""Heads-up display widgets used by the realtime pygame applications."""
+"""Compact heads-up display used by the pygame applications."""
 
 from __future__ import annotations
 
@@ -12,78 +12,27 @@ from rocket_landing.domain.models.state import State
 from rocket_landing.infrastructure.rendering.pygame.hud.fonts import HudFonts
 from rocket_landing.infrastructure.rendering.pygame.viewport import Viewport
 
-TITLE_POSITION = (28, 18)
-SUBTITLE_POSITION = (30, 52)
-
-METRIC_CARD_WIDTH = 210
-METRIC_CARD_HEIGHT = 84
-METRIC_CARD_START_X = 22
-METRIC_CARD_START_Y = 92
-METRIC_CARD_GAP = 12
-METRIC_LABEL_OFFSET = (14, 12)
-METRIC_VALUE_OFFSET = (14, 38)
-
-TELEMETRY_PANEL_MARGIN_TOP = 26
-TELEMETRY_PANEL_MARGIN_RIGHT = 26
-TELEMETRY_PANEL_WIDTH = 286
-TELEMETRY_PANEL_HEIGHT = 246
-TELEMETRY_HEADER_OFFSET = (18, 12)
-TELEMETRY_LINES_START_Y = 52
-TELEMETRY_LINE_HEIGHT = 24
-TELEMETRY_EXTRA_GAP = 8
-TELEMETRY_EXTRA_LINE_HEIGHT = 18
-TELEMETRY_MAX_EXTRA_LINES = 2
-
-STATUS_BAR_MARGIN_X = 20
-STATUS_BAR_MARGIN_BOTTOM = 20
-STATUS_BAR_HEIGHT = 68
-STATUS_BAR_TEXT_X = 18
-STATUS_BAR_HINT_Y = 12
-STATUS_BAR_SECONDARY_Y = 38
-
-THROTTLE_GAUGE_MARGIN_RIGHT = 48
-THROTTLE_GAUGE_MARGIN_BOTTOM = 284
-THROTTLE_GAUGE_WIDTH = 56
-THROTTLE_GAUGE_HEIGHT = 160
-THROTTLE_GAUGE_TITLE_OFFSET = (6, 8)
-THROTTLE_GAUGE_INNER_INSET_X = 20
-THROTTLE_GAUGE_INNER_INSET_Y = 36
-THROTTLE_GAUGE_INNER_TOP_OFFSET = 18
-THROTTLE_GAUGE_FILL_INSET = 4
-THROTTLE_GAUGE_PERCENT_BOTTOM = 28
-
-GIMBAL_GAUGE_MARGIN_RIGHT = 326
-GIMBAL_GAUGE_MARGIN_BOTTOM = 112
-GIMBAL_GAUGE_WIDTH = 230
-GIMBAL_GAUGE_HEIGHT = 48
-GIMBAL_GAUGE_LABEL_OFFSET = (10, 8)
-GIMBAL_TRACK_OFFSET = (76, 18)
-GIMBAL_TRACK_SIZE = (136, 12)
-GIMBAL_TRACK_MARKER_PADDING = 8
-GIMBAL_VALUE_OFFSET = (76, 28)
-
-PANEL_SHADOW_OFFSET = (4, 4)
-PANEL_SHADOW_ALPHA = 96
-PANEL_FILL_ALPHA = 230
-PANEL_BORDER_WIDTH = 3
-
-THROTTLE_GAUGE_BACKGROUND = (18, 25, 18)
-GIMBAL_TRACK_BACKGROUND = (24, 30, 40)
+HUD_MARGIN = 18
+TOP_BAR_HEIGHT = 58
+STATUS_PANEL_WIDTH = 300
+HELP_BAR_HEIGHT = 30
+PANEL_ALPHA = 178
+PANEL_BORDER_ALPHA = 120
+PANEL_RADIUS = 4
+CHIP_GAP = 18
+TITLE_WIDTH = 170
+LABEL_VALUE_GAP = 6
 
 CRITICAL_VERTICAL_SPEED = -12.0
 WARNING_VERTICAL_SPEED = -4.0
 LOW_FUEL_RATIO = 0.20
 WARNING_FUEL_RATIO = 0.45
 
-HINT_TEXT = (
-    "TAB switch controller   SPACE pause   R reset   ESC quit   "
-    "SHIFT precision   X cut throttle   C center gimbal"
-)
-SECONDARY_HINT_TEXT = "Manual: W/S or Up/Down throttle, A/D or Left/Right gimbal."
+HELP_TEXT = "F11 fullscreen   +/- zoom   0 reset zoom   TAB controller   SPACE pause   R reset"
 
 
 class HeadsUpDisplay:
-    """Draw telemetry panels, gauges and control hints over the scene."""
+    """Draw compact flight instrumentation over the scene."""
 
     def __init__(self, params: RocketParams, viewport: Viewport) -> None:
         self._params = params
@@ -102,197 +51,157 @@ class HeadsUpDisplay:
         status_text: str,
         steps_label: str,
         paused: bool,
-        extra_lines: list[str] | tuple[str, ...] = (),
     ) -> None:
-        """Render the full HUD for the current frame."""
+        """Render the HUD for the current frame."""
 
         fuel_ratio = 0.0
         if self._params.initial_fuel > 0.0:
             fuel_ratio = max(0.0, min(1.0, state.fuel / self._params.initial_fuel))
 
-        title = fonts.title.render("ROCKET LANDING", True, self._viewport.text)
-        subtitle = fonts.small.render(
-            f"{mode.upper()}  |  {controller_name.upper()}  |  {status_text}",
-            True,
-            self._status_color(status_text),
+        self._draw_top_bar(
+            surface,
+            fonts,
+            state=state,
+            action=action,
+            fuel_ratio=fuel_ratio,
+            status_text=status_text,
         )
-        surface.blit(title, TITLE_POSITION)
-        surface.blit(subtitle, SUBTITLE_POSITION)
+        self._draw_status_panel(
+            surface,
+            fonts,
+            mode=mode,
+            controller_name=controller_name,
+            elapsed_time=elapsed_time,
+            steps_label=steps_label,
+            paused=paused,
+        )
+        self._draw_help_bar(surface, fonts)
+
+    def _draw_top_bar(
+        self,
+        surface: pygame.Surface,
+        fonts: HudFonts,
+        *,
+        state: State,
+        action: Action,
+        fuel_ratio: float,
+        status_text: str,
+    ) -> None:
+        available_width = self._viewport.width - STATUS_PANEL_WIDTH - (HUD_MARGIN * 3)
+        bar = pygame.Rect(HUD_MARGIN, HUD_MARGIN, available_width, TOP_BAR_HEIGHT)
+        self._draw_panel(surface, bar)
+
+        title = fonts.title.render("ROCKET", True, self._viewport.text)
+        status = fonts.tiny.render(status_text, True, self._status_color(status_text))
+        surface.blit(title, (bar.x + 14, bar.y + 10))
+        surface.blit(status, (bar.x + 15, bar.y + 35))
 
         metrics = [
-            ("ALTITUDE", f"{state.z:07.1f} m", self._viewport.accent),
-            ("VITESSE", f"{state.speed:06.1f} m/s", self._viewport.accent),
-            (
-                "VITESSE VERT",
-                f"{state.vz:+06.1f} m/s",
-                self._velocity_color(state.vz),
-            ),
-            (
-                "CARBURANT",
-                f"{fuel_ratio * 100:05.1f}%",
-                self._fuel_color(fuel_ratio),
-            ),
+            ("ALT", f"{state.z:,.0f} m", self._viewport.accent),
+            ("V", f"{state.speed:,.1f} m/s", self._viewport.accent),
+            ("VZ", f"{state.vz:+.1f}", self._velocity_color(state.vz)),
+            ("FUEL", f"{fuel_ratio * 100:.0f}%", self._fuel_color(fuel_ratio)),
+            ("THR", f"{action.throttle * 100:.0f}%", self._fuel_color(action.throttle)),
+            ("GMB", f"{math.degrees(action.gimbal):+.1f}deg", self._viewport.accent_warm),
         ]
-        for index, (label, value, color) in enumerate(metrics):
-            rect = pygame.Rect(
-                METRIC_CARD_START_X,
-                METRIC_CARD_START_Y + index * (METRIC_CARD_HEIGHT + METRIC_CARD_GAP),
-                METRIC_CARD_WIDTH,
-                METRIC_CARD_HEIGHT,
-            )
-            self._draw_panel(surface, rect)
-            label_surface = fonts.small.render(label, True, self._viewport.text)
-            value_surface = fonts.metric.render(value, True, color)
-            surface.blit(
-                label_surface,
-                (rect.x + METRIC_LABEL_OFFSET[0], rect.y + METRIC_LABEL_OFFSET[1]),
-            )
-            surface.blit(
-                value_surface,
-                (rect.x + METRIC_VALUE_OFFSET[0], rect.y + METRIC_VALUE_OFFSET[1]),
-            )
 
+        x = bar.x + TITLE_WIDTH
+        y = bar.y + 18
+        for label, value, color in metrics:
+            x = self._draw_metric(surface, fonts, x, y, label, value, color)
+            x += CHIP_GAP
+
+    def _draw_status_panel(
+        self,
+        surface: pygame.Surface,
+        fonts: HudFonts,
+        *,
+        mode: str,
+        controller_name: str,
+        elapsed_time: float,
+        steps_label: str,
+        paused: bool,
+    ) -> None:
         panel = pygame.Rect(
-            self._viewport.width - TELEMETRY_PANEL_WIDTH - TELEMETRY_PANEL_MARGIN_RIGHT,
-            TELEMETRY_PANEL_MARGIN_TOP,
-            TELEMETRY_PANEL_WIDTH,
-            TELEMETRY_PANEL_HEIGHT,
+            self._viewport.width - STATUS_PANEL_WIDTH - HUD_MARGIN,
+            HUD_MARGIN,
+            STATUS_PANEL_WIDTH,
+            TOP_BAR_HEIGHT,
         )
         self._draw_panel(surface, panel)
 
-        header = fonts.small.render("TELEMETRIE", True, self._viewport.text)
-        surface.blit(
-            header,
-            (panel.x + TELEMETRY_HEADER_OFFSET[0], panel.y + TELEMETRY_HEADER_OFFSET[1]),
-        )
-
-        lines = [
-            ("CONTROLE", controller_name.upper()),
-            ("STATUT", status_text),
-            ("PAS", steps_label),
-            ("PITCH", f"{math.degrees(state.theta):+05.1f} deg"),
-            ("GIMBAL", f"{math.degrees(action.gimbal):+05.1f} deg"),
-            ("POUSSEE", f"{action.throttle * 100:05.1f}%"),
-            ("TEMPS", self._format_time(elapsed_time)),
-            ("PAUSE", "OUI" if paused else "NON"),
+        left_lines = [
+            ("MODE", mode.upper()),
+            ("CTRL", controller_name.upper()),
         ]
-        y = panel.y + TELEMETRY_LINES_START_Y
-        for label, value in lines:
-            label_surface = fonts.small.render(label, True, self._viewport.text)
-            value_surface = fonts.small.render(value, True, self._status_color(status_text))
-            surface.blit(label_surface, (panel.x + TELEMETRY_HEADER_OFFSET[0], y))
+        right_lines = [
+            ("TIME", self._format_time(elapsed_time)),
+            ("STEP", steps_label),
+        ]
+        self._draw_tiny_lines(surface, fonts, panel.x + 14, panel.y + 10, left_lines)
+        self._draw_tiny_lines(surface, fonts, panel.x + 158, panel.y + 10, right_lines)
+
+        if paused:
+            paused_surface = fonts.tiny.render("PAUSED", True, self._viewport.accent_warm)
             surface.blit(
-                value_surface,
-                (panel.right - value_surface.get_width() - TELEMETRY_HEADER_OFFSET[0], y),
+                paused_surface,
+                (panel.right - paused_surface.get_width() - 14, panel.y + 36),
             )
-            y += TELEMETRY_LINE_HEIGHT
 
-        extra_y = y + TELEMETRY_EXTRA_GAP
-        for line in extra_lines[:TELEMETRY_MAX_EXTRA_LINES]:
-            extra_surface = fonts.tiny.render(line, True, self._viewport.text)
-            surface.blit(extra_surface, (panel.x + TELEMETRY_HEADER_OFFSET[0], extra_y))
-            extra_y += TELEMETRY_EXTRA_LINE_HEIGHT
-
+    def _draw_help_bar(self, surface: pygame.Surface, fonts: HudFonts) -> None:
+        text = fonts.tiny.render(HELP_TEXT, True, self._viewport.text)
+        bar_width = min(self._viewport.width - (HUD_MARGIN * 2), text.get_width() + 28)
         bar = pygame.Rect(
-            STATUS_BAR_MARGIN_X,
-            self._viewport.height - STATUS_BAR_HEIGHT - STATUS_BAR_MARGIN_BOTTOM,
-            self._viewport.width - (2 * STATUS_BAR_MARGIN_X),
-            STATUS_BAR_HEIGHT,
+            HUD_MARGIN,
+            self._viewport.height - HELP_BAR_HEIGHT - HUD_MARGIN,
+            bar_width,
+            HELP_BAR_HEIGHT,
         )
         self._draw_panel(surface, bar)
-        hint = fonts.small.render(HINT_TEXT, True, self._viewport.text)
-        surface.blit(hint, (bar.x + STATUS_BAR_TEXT_X, bar.y + STATUS_BAR_HINT_Y))
-        line2 = fonts.small.render(
-            SECONDARY_HINT_TEXT,
-            True,
-            self._viewport.text,
-        )
-        surface.blit(line2, (bar.x + STATUS_BAR_TEXT_X, bar.y + STATUS_BAR_SECONDARY_Y))
+        surface.blit(text, (bar.x + 14, bar.y + 8))
 
-        gauge = pygame.Rect(
-            self._viewport.width - THROTTLE_GAUGE_WIDTH - THROTTLE_GAUGE_MARGIN_RIGHT,
-            self._viewport.height - THROTTLE_GAUGE_HEIGHT - THROTTLE_GAUGE_MARGIN_BOTTOM,
-            THROTTLE_GAUGE_WIDTH,
-            THROTTLE_GAUGE_HEIGHT,
-        )
-        self._draw_panel(surface, gauge)
-        throttle_title = fonts.tiny.render("POUSSEE", True, self._viewport.text)
-        surface.blit(
-            throttle_title,
-            (gauge.x + THROTTLE_GAUGE_TITLE_OFFSET[0], gauge.y + THROTTLE_GAUGE_TITLE_OFFSET[1]),
-        )
+    def _draw_metric(
+        self,
+        surface: pygame.Surface,
+        fonts: HudFonts,
+        x: int,
+        y: int,
+        label: str,
+        value: str,
+        color: tuple[int, int, int],
+    ) -> int:
+        label_surface = fonts.tiny.render(label, True, self._viewport.text)
+        value_surface = fonts.metric.render(value, True, color)
+        surface.blit(label_surface, (x, y + 4))
+        value_x = x + label_surface.get_width() + LABEL_VALUE_GAP
+        surface.blit(value_surface, (value_x, y))
+        return value_x + value_surface.get_width()
 
-        inner = gauge.inflate(-THROTTLE_GAUGE_INNER_INSET_X, -THROTTLE_GAUGE_INNER_INSET_Y)
-        inner.top += THROTTLE_GAUGE_INNER_TOP_OFFSET
-        pygame.draw.rect(surface, THROTTLE_GAUGE_BACKGROUND, inner, border_radius=4)
-        fill_height = int(round(inner.height * action.throttle))
-        fill_rect = pygame.Rect(
-            inner.x + THROTTLE_GAUGE_FILL_INSET,
-            inner.bottom - fill_height,
-            inner.width - (2 * THROTTLE_GAUGE_FILL_INSET),
-            fill_height,
-        )
-        pygame.draw.rect(
-            surface,
-            self._fuel_color(action.throttle),
-            fill_rect,
-            border_radius=4,
-        )
-        percent = fonts.small.render(
-            f"{action.throttle * 100:03.0f}%",
-            True,
-            self._viewport.text,
-        )
-        surface.blit(
-            percent,
-            (
-                gauge.centerx - (percent.get_width() // 2),
-                gauge.bottom - THROTTLE_GAUGE_PERCENT_BOTTOM,
-            ),
-        )
-
-        gauge = pygame.Rect(
-            self._viewport.width - GIMBAL_GAUGE_WIDTH - GIMBAL_GAUGE_MARGIN_RIGHT,
-            self._viewport.height - GIMBAL_GAUGE_HEIGHT - GIMBAL_GAUGE_MARGIN_BOTTOM,
-            GIMBAL_GAUGE_WIDTH,
-            GIMBAL_GAUGE_HEIGHT,
-        )
-        self._draw_panel(surface, gauge)
-        label = fonts.tiny.render("GIMBAL", True, self._viewport.text)
-        surface.blit(
-            label,
-            (gauge.x + GIMBAL_GAUGE_LABEL_OFFSET[0], gauge.y + GIMBAL_GAUGE_LABEL_OFFSET[1]),
-        )
-
-        track = pygame.Rect(
-            gauge.x + GIMBAL_TRACK_OFFSET[0],
-            gauge.y + GIMBAL_TRACK_OFFSET[1],
-            GIMBAL_TRACK_SIZE[0],
-            GIMBAL_TRACK_SIZE[1],
-        )
-        pygame.draw.rect(surface, GIMBAL_TRACK_BACKGROUND, track, border_radius=6)
-        pygame.draw.line(surface, self._viewport.text, track.midleft, track.midright, 2)
-        center_x = track.centerx
-        ratio = action.gimbal / max(0.001, self._params.max_gimbal)
-        ratio = max(-1.0, min(1.0, ratio))
-        marker_x = int(round(center_x + (ratio * (track.width / 2 - GIMBAL_TRACK_MARKER_PADDING))))
-        pygame.draw.circle(surface, self._viewport.accent_warm, (marker_x, track.centery), 8)
-        value = fonts.small.render(
-            f"{math.degrees(action.gimbal):+05.1f} deg",
-            True,
-            self._viewport.text,
-        )
-        surface.blit(value, (gauge.x + GIMBAL_VALUE_OFFSET[0], gauge.y + GIMBAL_VALUE_OFFSET[1]))
+    def _draw_tiny_lines(
+        self,
+        surface: pygame.Surface,
+        fonts: HudFonts,
+        x: int,
+        y: int,
+        lines: list[tuple[str, str]],
+    ) -> None:
+        for index, (label, value) in enumerate(lines):
+            line_y = y + (index * 20)
+            label_surface = fonts.tiny.render(label, True, self._viewport.text)
+            value_surface = fonts.tiny.render(value, True, self._viewport.accent)
+            surface.blit(label_surface, (x, line_y))
+            surface.blit(value_surface, (x + 48, line_y))
 
     def _draw_panel(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
-        shadow_rect = rect.move(*PANEL_SHADOW_OFFSET)
-        shadow = pygame.Surface(shadow_rect.size, pygame.SRCALPHA)
-        shadow.fill((*self._viewport.panel_shadow, PANEL_SHADOW_ALPHA))
-        surface.blit(shadow, shadow_rect)
-
         panel = pygame.Surface(rect.size, pygame.SRCALPHA)
-        panel.fill((*self._viewport.panel_bg, PANEL_FILL_ALPHA))
-        pygame.draw.rect(panel, self._viewport.panel_border, panel.get_rect(), PANEL_BORDER_WIDTH)
+        panel.fill((*self._viewport.panel_bg, PANEL_ALPHA))
+        pygame.draw.rect(
+            panel,
+            (*self._viewport.panel_border, PANEL_BORDER_ALPHA),
+            panel.get_rect(),
+            1,
+            border_radius=PANEL_RADIUS,
+        )
         surface.blit(panel, rect)
 
     def _status_color(self, status_text: str) -> tuple[int, int, int]:

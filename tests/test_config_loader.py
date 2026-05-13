@@ -14,7 +14,7 @@ def test_load_default_simulation_config() -> None:
     assert config.name == "default_descent"
     assert config.params.gravity == 9.81
     assert config.initial_state.z == 120.0
-    assert config.initial_state.fuel == 8_000.0
+    assert config.initial_state.fuel == 12_000.0
 
 
 def test_load_custom_simulation_config(tmp_path: Path) -> None:
