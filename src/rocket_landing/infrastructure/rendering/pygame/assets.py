@@ -52,7 +52,9 @@ class SpriteAssetLoader:
             rocket_body_height_px=body_height,
             rocket_anchor_px=rocket_anchor,
             landing_pad=self._crop_to_opaque(self._load_png("landing_pad_side.png")),
-            ground_equipment=self._crop_to_opaque(self._load_png("ground_equipment_silhouette.png")),
+            ground_equipment=self._crop_to_opaque(
+                self._load_png("ground_equipment_silhouette.png")
+            ),
             cloud_layer_low=self._crop_to_opaque(self._load_png("cloud_layer_soft_01.png")),
             cloud_layer_high=self._crop_to_opaque(self._load_png("cloud_layer_soft_02.png")),
             starfield_tile=self._load_png("starfield_sparse_tile.png"),

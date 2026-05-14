@@ -29,8 +29,7 @@ LOW_FUEL_RATIO = 0.20
 WARNING_FUEL_RATIO = 0.45
 
 HELP_TEXT = (
-    "F11 fullscreen   +/- zoom   0 reset zoom   F3 forces   "
-    "TAB controller   SPACE pause   R reset"
+    "F11 fullscreen   +/- zoom   0 reset zoom   F3 forces   TAB controller   SPACE pause   R reset"
 )
 
 

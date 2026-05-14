@@ -335,7 +335,4 @@ class ForceOverlayRenderer:
     @staticmethod
     def _format_force_components(force: ForceVector) -> str:
         magnitude_kn = math.hypot(force.x, force.z) / 1_000.0
-        return (
-            f"{force.x / 1_000.0:+.1f}, {force.z / 1_000.0:+.1f} kN"
-            f"  |  {magnitude_kn:.1f} kN"
-        )
+        return f"{force.x / 1_000.0:+.1f}, {force.z / 1_000.0:+.1f} kN  |  {magnitude_kn:.1f} kN"

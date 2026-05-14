@@ -160,9 +160,7 @@ class PygameLiveSimulationApp:
             ):
                 self._scene.zoom_out()
             elif (
-                event.type == pygame.KEYDOWN
-                and event.key == pygame.K_0
-                and self._scene is not None
+                event.type == pygame.KEYDOWN and event.key == pygame.K_0 and self._scene is not None
             ):
                 self._scene.reset_zoom()
             elif (
