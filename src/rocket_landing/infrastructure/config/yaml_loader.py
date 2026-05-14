@@ -141,12 +141,22 @@ def _parse_simulation_config(data: dict[str, Any], *, source_path: Path) -> Simu
         source_path=source_path,
     )
 
+    params = RocketParams(**params_payload)
+    initial_state = State(**initial_state_data)
+    controls = ManualControlConfig(**controls_data)
+    _validate_physical_ranges(
+        params=params,
+        initial_state=initial_state,
+        controls=controls,
+        source_path=source_path,
+    )
+
     return SimulationConfig(
         name=name.strip(),
         description=description.strip() if isinstance(description, str) else None,
-        params=RocketParams(**params_payload),
-        initial_state=State(**initial_state_data),
-        controls=ManualControlConfig(**controls_data),
+        params=params,
+        initial_state=initial_state,
+        controls=controls,
     )
 
 
@@ -186,3 +196,75 @@ def _validate_missing_keys(
     if missing_keys:
         joined = ", ".join(missing_keys)
         raise ValueError(f"missing keys in {section_name} for {source_path}: {joined}")
+
+
+def _validate_physical_ranges(
+    *,
+    params: RocketParams,
+    initial_state: State,
+    controls: ManualControlConfig,
+    source_path: Path,
+) -> None:
+    """Reject obviously non-physical or unusable runtime configurations."""
+
+    validations = (
+        (params.gravity > 0.0, "gravity must be strictly positive"),
+        (params.dry_mass > 0.0, "dry_mass must be strictly positive"),
+        (params.initial_fuel >= 0.0, "initial_fuel must be non-negative"),
+        (params.max_thrust > 0.0, "max_thrust must be strictly positive"),
+        (params.fuel_flow_rate >= 0.0, "fuel_flow_rate must be non-negative"),
+        (params.length > 0.0, "length must be strictly positive"),
+        (params.radius > 0.0, "radius must be strictly positive"),
+        (params.max_gimbal >= 0.0, "max_gimbal must be non-negative"),
+        (
+            params.atmosphere_scale_height > 0.0,
+            "atmosphere_scale_height must be strictly positive",
+        ),
+        (
+            params.air_density_sea_level >= 0.0,
+            "air_density_sea_level must be non-negative",
+        ),
+        (
+            params.axial_drag_coefficient >= 0.0,
+            "axial_drag_coefficient must be non-negative",
+        ),
+        (
+            params.side_drag_coefficient >= 0.0,
+            "side_drag_coefficient must be non-negative",
+        ),
+        (
+            params.center_of_pressure_offset >= 0.0,
+            "center_of_pressure_offset must be non-negative",
+        ),
+        (
+            params.angular_damping_coefficient >= 0.0,
+            "angular_damping_coefficient must be non-negative",
+        ),
+        (
+            params.control_surface_force_coefficient >= 0.0,
+            "control_surface_force_coefficient must be non-negative",
+        ),
+        (params.max_landing_vz >= 0.0, "max_landing_vz must be non-negative"),
+        (params.max_landing_vx >= 0.0, "max_landing_vx must be non-negative"),
+        (params.max_landing_theta >= 0.0, "max_landing_theta must be non-negative"),
+        (params.max_landing_omega >= 0.0, "max_landing_omega must be non-negative"),
+        (params.max_landing_x >= 0.0, "max_landing_x must be non-negative"),
+        (initial_state.fuel >= 0.0, "initial_state.fuel must be non-negative"),
+        (
+            initial_state.fuel <= params.initial_fuel,
+            "initial_state.fuel must not exceed initial_fuel",
+        ),
+        (controls.throttle_rate > 0.0, "controls.throttle_rate must be strictly positive"),
+        (
+            controls.engine_gimbal_rate > 0.0,
+            "controls.engine_gimbal_rate must be strictly positive",
+        ),
+        (controls.aero_steer_rate > 0.0, "controls.aero_steer_rate must be strictly positive"),
+        (
+            controls.steering_return_rate > 0.0,
+            "controls.steering_return_rate must be strictly positive",
+        ),
+    )
+    for is_valid, message in validations:
+        if not is_valid:
+            raise ValueError(f"{message}: {source_path}")

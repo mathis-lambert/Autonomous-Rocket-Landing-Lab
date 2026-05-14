@@ -28,9 +28,7 @@ WARNING_VERTICAL_SPEED = -4.0
 LOW_FUEL_RATIO = 0.20
 WARNING_FUEL_RATIO = 0.45
 
-HELP_TEXT = (
-    "ARROWS fly   F3 forces   SPACE pause   R reset   ESC quit"
-)
+HELP_TEXT = "ARROWS fly   F3 forces   SPACE pause   R reset   ESC quit"
 
 
 class HeadsUpDisplay:

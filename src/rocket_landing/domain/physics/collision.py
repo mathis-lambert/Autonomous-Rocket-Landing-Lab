@@ -7,6 +7,7 @@ from dataclasses import replace
 from rocket_landing.domain.models.params import RocketParams
 from rocket_landing.domain.models.results import StepResult
 from rocket_landing.domain.models.state import State
+from rocket_landing.domain.physics.geometry import BoosterGeometry
 
 
 class GroundContactResolver:
@@ -14,14 +15,17 @@ class GroundContactResolver:
 
     def __init__(self, params: RocketParams) -> None:
         self._params = params
+        self._geometry = BoosterGeometry(params)
 
     def resolve(self, state: State) -> StepResult:
         """Snap the booster to the ground and classify the contact outcome."""
 
-        if state.z > 0.0:
+        bottom, _top = self._geometry.segment_endpoints(state)
+        bottom_z = bottom[1]
+        if bottom_z > 0.0:
             return StepResult(state=state, terminated=False, landed=False, crashed=False)
 
-        grounded_state = replace(state, z=0.0)
+        grounded_state = replace(state, z=state.z - bottom_z)
         landed = self._is_soft_landing(grounded_state)
         crashed = not landed
         stopped_state = replace(grounded_state, vx=0.0, vz=0.0, omega=0.0)

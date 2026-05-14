@@ -6,6 +6,7 @@ thresholds used to classify a touchdown as safe or unsafe.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 
@@ -47,7 +48,7 @@ class RocketParams:
     def frontal_area(self) -> float:
         """Return the circular frontal reference area in square meters."""
 
-        return 3.141592653589793 * self.radius * self.radius
+        return math.pi * self.radius * self.radius
 
     @property
     def lateral_area(self) -> float:

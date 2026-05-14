@@ -142,3 +142,107 @@ def test_reject_unknown_config_key(tmp_path: Path) -> None:
 
 def test_default_config_path_points_to_existing_file() -> None:
     assert DEFAULT_CONFIG_PATH.exists()
+
+
+def test_reject_non_physical_vehicle_config(tmp_path: Path) -> None:
+    config_path = tmp_path / "invalid_physics.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "name: invalid_physics",
+                "vehicle:",
+                "  dry_mass: 22000.0",
+                "  initial_fuel: 8000.0",
+                "  max_thrust: 0.0",
+                "  fuel_flow_rate: 120.0",
+                "  length: 24.0",
+                "  radius: 1.8",
+                "  max_gimbal: 0.30",
+                "environment:",
+                "  gravity: 9.81",
+                "aerodynamics:",
+                "  air_density_sea_level: 1.225",
+                "  atmosphere_scale_height: 8500.0",
+                "  axial_drag_coefficient: 0.35",
+                "  side_drag_coefficient: 1.15",
+                "  center_of_pressure_offset: 7.0",
+                "  angular_damping_coefficient: 0.12",
+                "  control_surface_force_coefficient: 0.75",
+                "landing:",
+                "  max_landing_vz: 3.0",
+                "  max_landing_vx: 1.5",
+                "  max_landing_theta: 0.10",
+                "  max_landing_omega: 0.25",
+                "  max_landing_x: 5.0",
+                "controls:",
+                "  throttle_rate: 1.15",
+                "  engine_gimbal_rate: 1.25",
+                "  aero_steer_rate: 4.0",
+                "  steering_return_rate: 1.65",
+                "initial_state:",
+                "  x: 0.0",
+                "  z: 120.0",
+                "  vx: 0.0",
+                "  vz: -15.0",
+                "  theta: 0.0",
+                "  omega: 0.0",
+                "  fuel: 8000.0",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="max_thrust must be strictly positive"):
+        load_simulation_config(config_path)
+
+
+def test_reject_initial_fuel_above_vehicle_capacity(tmp_path: Path) -> None:
+    config_path = tmp_path / "invalid_initial_state.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "name: invalid_initial_state",
+                "vehicle:",
+                "  dry_mass: 22000.0",
+                "  initial_fuel: 8000.0",
+                "  max_thrust: 650000.0",
+                "  fuel_flow_rate: 120.0",
+                "  length: 24.0",
+                "  radius: 1.8",
+                "  max_gimbal: 0.30",
+                "environment:",
+                "  gravity: 9.81",
+                "aerodynamics:",
+                "  air_density_sea_level: 1.225",
+                "  atmosphere_scale_height: 8500.0",
+                "  axial_drag_coefficient: 0.35",
+                "  side_drag_coefficient: 1.15",
+                "  center_of_pressure_offset: 7.0",
+                "  angular_damping_coefficient: 0.12",
+                "  control_surface_force_coefficient: 0.75",
+                "landing:",
+                "  max_landing_vz: 3.0",
+                "  max_landing_vx: 1.5",
+                "  max_landing_theta: 0.10",
+                "  max_landing_omega: 0.25",
+                "  max_landing_x: 5.0",
+                "controls:",
+                "  throttle_rate: 1.15",
+                "  engine_gimbal_rate: 1.25",
+                "  aero_steer_rate: 4.0",
+                "  steering_return_rate: 1.65",
+                "initial_state:",
+                "  x: 0.0",
+                "  z: 120.0",
+                "  vx: 0.0",
+                "  vz: -15.0",
+                "  theta: 0.0",
+                "  omega: 0.0",
+                "  fuel: 9000.0",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="initial_state.fuel must not exceed initial_fuel"):
+        load_simulation_config(config_path)
