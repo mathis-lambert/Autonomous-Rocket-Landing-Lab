@@ -33,3 +33,4 @@ class StepResult:
     terminated: bool
     landed: bool
     crashed: bool
+    impact_state: State | None = None

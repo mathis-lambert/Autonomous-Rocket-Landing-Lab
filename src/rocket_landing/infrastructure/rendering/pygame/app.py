@@ -110,7 +110,7 @@ class PygameReplayApp:
                     self._scene.reset_zoom()
                 elif (
                     event.type == pygame.KEYDOWN
-                    and event.key == pygame.K_d
+                    and event.key == pygame.K_F3
                     and self._scene is not None
                 ):
                     self._scene.toggle_force_vectors()

@@ -41,7 +41,7 @@ def test_controlled_session_step_appends_history() -> None:
         ),
     )
 
-    result = session.step(Action(throttle=0.0, gimbal=0.0))
+    result = session.step(Action(throttle=0.0, engine_gimbal=0.0, aero_steer=0.0))
 
     assert len(session.history.states) == 2
     assert session.step_count == 1
@@ -64,7 +64,7 @@ def test_controlled_session_reset_restores_configured_initial_state() -> None:
         initial_state=initial_state,
     )
 
-    session.step(Action(throttle=0.2, gimbal=0.0))
+    session.step(Action(throttle=0.2, engine_gimbal=0.0, aero_steer=0.0))
     session.reset()
 
     assert session.state == initial_state

@@ -23,17 +23,19 @@ class RocketParams:
     fuel_flow_rate: float = 180.0
     length: float = 24.0
     radius: float = 1.8
-    max_gimbal: float = 0.15
+    max_gimbal: float = 0.22
     air_density_sea_level: float = 1.225
     atmosphere_scale_height: float = 8_500.0
     axial_drag_coefficient: float = 0.35
     side_drag_coefficient: float = 1.15
     center_of_pressure_offset: float = 7.0
     angular_damping_coefficient: float = 0.12
+    control_surface_force_coefficient: float = 0.75
     max_landing_vz: float = 3.0
     max_landing_vx: float = 1.5
     max_landing_theta: float = 0.10
     max_landing_omega: float = 0.25
+    max_landing_x: float = 5.0
 
     @property
     def initial_mass(self) -> float:

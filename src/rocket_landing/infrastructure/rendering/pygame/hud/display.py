@@ -29,7 +29,7 @@ LOW_FUEL_RATIO = 0.20
 WARNING_FUEL_RATIO = 0.45
 
 HELP_TEXT = (
-    "F11 fullscreen   +/- zoom   0 reset zoom   D forces   "
+    "F11 fullscreen   +/- zoom   0 reset zoom   F3 forces   "
     "TAB controller   SPACE pause   R reset"
 )
 
@@ -107,7 +107,12 @@ class HeadsUpDisplay:
             ("VZ", f"{state.vz:+.1f}", self._velocity_color(state.vz)),
             ("FUEL", f"{fuel_ratio * 100:.0f}%", self._fuel_color(fuel_ratio)),
             ("THR", f"{action.throttle * 100:.0f}%", self._fuel_color(action.throttle)),
-            ("GMB", f"{math.degrees(action.gimbal):+.1f}deg", self._viewport.accent_warm),
+            (
+                "ENG",
+                f"{math.degrees(action.engine_gimbal):+.1f}deg",
+                self._viewport.accent_warm,
+            ),
+            ("AERO", f"{action.aero_steer * 100:+.0f}%", self._viewport.accent_warm),
         ]
 
         x = bar.x + TITLE_WIDTH

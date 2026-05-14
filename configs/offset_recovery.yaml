@@ -8,7 +8,7 @@ vehicle:
   fuel_flow_rate: 180.0
   length: 24.0
   radius: 1.8
-  max_gimbal: 0.15
+  max_gimbal: 0.30
 
 environment:
   gravity: 9.81
@@ -20,12 +20,14 @@ aerodynamics:
   side_drag_coefficient: 1.15
   center_of_pressure_offset: 7.0
   angular_damping_coefficient: 0.12
+  control_surface_force_coefficient: 0.75
 
 landing:
   max_landing_vz: 3.0
   max_landing_vx: 1.5
   max_landing_theta: 0.10
   max_landing_omega: 0.25
+  max_landing_x: 5.0
 
 initial_state:
   x: 45.0

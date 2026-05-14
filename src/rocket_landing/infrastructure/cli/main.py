@@ -10,19 +10,8 @@ import argparse
 from collections.abc import Sequence
 from pathlib import Path
 
-from rocket_landing.application.control.baseline import BaselineLandingController
-from rocket_landing.application.use_cases.run_constant_action import RunConstantAction
-from rocket_landing.application.use_cases.run_controlled_session import ControlledSimulationSession
 from rocket_landing.domain.models.action import Action
 from rocket_landing.infrastructure.config import DEFAULT_CONFIG_PATH, load_simulation_config
-from rocket_landing.infrastructure.rendering.matplotlib.trajectory_plotter import (
-    MatplotlibTrajectoryPlotter,
-)
-from rocket_landing.infrastructure.rendering.pygame.app import PygameReplayApp
-from rocket_landing.infrastructure.rendering.pygame.live_app import PygameLiveSimulationApp
-from rocket_landing.infrastructure.rendering.pygame.manual_controller import (
-    PygameKeyboardManualController,
-)
 
 
 def _run_constant_action_demo(args: argparse.Namespace) -> int:
@@ -35,9 +24,19 @@ def _run_constant_action_demo(args: argparse.Namespace) -> int:
     if args.force_vector_scale <= 0.0:
         raise ValueError("force_vector_scale must be strictly positive")
 
+    from rocket_landing.application.use_cases.run_constant_action import RunConstantAction
+    from rocket_landing.infrastructure.rendering.matplotlib.trajectory_plotter import (
+        MatplotlibTrajectoryPlotter,
+    )
+    from rocket_landing.infrastructure.rendering.pygame.app import PygameReplayApp
+
     config = load_simulation_config(args.config)
     params = config.params
-    action = Action(throttle=args.throttle, gimbal=args.gimbal)
+    action = Action(
+        throttle=args.throttle,
+        engine_gimbal=args.gimbal,
+        aero_steer=args.aero_steer,
+    )
     run = RunConstantAction(
         params,
         args.dt,
@@ -80,8 +79,20 @@ def _run_live_session(args: argparse.Namespace) -> int:
     if args.force_vector_scale <= 0.0:
         raise ValueError("force_vector_scale must be strictly positive")
 
+    from rocket_landing.application.control.baseline import BaselineLandingController
+    from rocket_landing.application.use_cases.run_controlled_session import (
+        ControlledSimulationSession,
+    )
+    from rocket_landing.infrastructure.rendering.pygame.live_app import (
+        PygameLiveSimulationApp,
+    )
+    from rocket_landing.infrastructure.rendering.pygame.manual_controller import (
+        PygameKeyboardManualController,
+    )
+
     config = load_simulation_config(args.config)
     params = config.params
+
     session = ControlledSimulationSession(
         params=params,
         dt=args.dt,
@@ -108,8 +119,7 @@ def build_parser() -> argparse.ArgumentParser:
     """Build the root CLI parser and all subcommands.
 
     Returns:
-        A fully configured argument parser exposing the ``demo`` and
-        ``session`` workflows.
+        A fully configured argument parser exposing simulation workflows.
     """
 
     parser = argparse.ArgumentParser(description="Rocket landing simulation tools")
@@ -126,7 +136,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--gimbal",
         type=float,
         default=0.0,
-        help="Constant gimbal command in radians",
+        help="Constant engine gimbal command in radians",
+    )
+    demo_parser.add_argument(
+        "--aero-steer",
+        type=float,
+        default=0.0,
+        help="Constant aerodynamic steering command in [-1, 1]",
     )
     demo_parser.add_argument(
         "--dt",
@@ -212,6 +228,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.065,
         help="Debug overlay scale in pixels per kilonewton",
     )
+
     return parser
 
 

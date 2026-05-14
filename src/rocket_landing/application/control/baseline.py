@@ -1,9 +1,8 @@
-"""Deterministic baseline controller used before introducing reinforcement learning.
+"""Deterministic baseline controller for validating the simulator.
 
 The baseline is intentionally simple and hand-tuned.  Its role is not to be
 optimal, but to provide:
 - a sanity check that the vehicle is controllable
-- a comparison point for later RL agents
 - a readable reference policy for debugging the physics model
 """
 
@@ -39,7 +38,7 @@ class BaselineLandingController(FlightController):
 
     The controller combines:
     - a lateral guidance law turning horizontal error into a target attitude
-    - an attitude stabilizer turning that target into a gimbal command
+    - an attitude stabilizer turning that target into engine and aero steering
     - a piecewise vertical-speed schedule converted into throttle
     """
 
@@ -70,8 +69,13 @@ class BaselineLandingController(FlightController):
         target_vz = self._desired_vertical_speed(state)
 
         theta_error = target_theta - state.theta
-        gimbal = (THETA_PROPORTIONAL_GAIN * theta_error) - (THETA_DAMPING_GAIN * state.omega)
-        gimbal = self._clamp(gimbal, -self._params.max_gimbal, self._params.max_gimbal)
+        steering = (THETA_PROPORTIONAL_GAIN * theta_error) - (THETA_DAMPING_GAIN * state.omega)
+        engine_gimbal = self._clamp(
+            steering,
+            -self._params.max_gimbal,
+            self._params.max_gimbal,
+        )
+        aero_steer = self._clamp(steering / max(self._params.max_gimbal, 1e-6), -1.0, 1.0)
 
         hover_throttle = self._hover_throttle(state)
         vertical_error = target_vz - state.vz
@@ -81,7 +85,11 @@ class BaselineLandingController(FlightController):
             + (ATTITUDE_FEEDFORWARD_GAIN * abs(target_theta))
         )
         throttle = self._clamp(throttle, 0.0, 1.0)
-        return Action(throttle=throttle, gimbal=gimbal)
+        return Action(
+            throttle=throttle,
+            engine_gimbal=engine_gimbal,
+            aero_steer=aero_steer,
+        )
 
     def _desired_theta(self, state: State) -> float:
         """Turn horizontal position and drift into an attitude target."""

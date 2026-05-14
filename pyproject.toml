@@ -1,7 +1,7 @@
 [project]
 name = "rocket-landing"
 version = "0.1.0"
-description = "A minimal 2D booster landing simulator for physics and RL experimentation"
+description = "A minimal 2D booster landing simulator for physics experimentation"
 readme = "README.md"
 authors = [
     { name = "Mathis LAMBERT", email = "mathis.lambert27@gmail.com" }

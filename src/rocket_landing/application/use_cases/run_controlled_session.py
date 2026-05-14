@@ -96,7 +96,7 @@ class ControlledSimulationSession:
         self._history.append(
             time=self._world.time,
             state=self._world.state,
-            action=Action(throttle=0.0, gimbal=0.0),
+            action=Action.neutral(),
         )
         self._step_count = 0
         self._last_result = None

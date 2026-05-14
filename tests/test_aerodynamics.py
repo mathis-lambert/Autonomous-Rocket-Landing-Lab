@@ -9,7 +9,11 @@ def test_drag_reduces_horizontal_speed_without_thrust() -> None:
     engine = SimulationEngine(params)
     state = State(x=0.0, z=800.0, vx=60.0, vz=0.0, theta=0.0, omega=0.0, fuel=100.0)
 
-    result = engine.step(state, Action(throttle=0.0, gimbal=0.0), dt=0.1)
+    result = engine.step(
+        state,
+        Action(throttle=0.0, engine_gimbal=0.0, aero_steer=0.0),
+        dt=0.1,
+    )
 
     assert result.state.vx < state.vx
 
@@ -23,7 +27,11 @@ def test_aerodynamic_torque_rotates_vehicle_toward_velocity_vector() -> None:
     engine = SimulationEngine(params)
     state = State(x=0.0, z=1_200.0, vx=10.0, vz=55.0, theta=0.35, omega=0.0, fuel=100.0)
 
-    result = engine.step(state, Action(throttle=0.0, gimbal=0.0), dt=0.2)
+    result = engine.step(
+        state,
+        Action(throttle=0.0, engine_gimbal=0.0, aero_steer=0.0),
+        dt=0.2,
+    )
 
     assert result.state.omega < 0.0
     assert result.state.theta < state.theta
@@ -34,6 +42,35 @@ def test_side_slip_generates_lateral_aerodynamic_force() -> None:
     engine = SimulationEngine(params)
     state = State(x=0.0, z=900.0, vx=35.0, vz=-5.0, theta=0.0, omega=0.0, fuel=100.0)
 
-    result = engine.dynamics.forces_for(state, Action(throttle=0.0, gimbal=0.0))
+    result = engine.dynamics.forces_for(
+        state,
+        Action(throttle=0.0, engine_gimbal=0.0, aero_steer=0.0),
+    )
 
     assert result.aerodynamic.x < 0.0
+
+
+def test_full_gimbal_can_recover_from_horizontal_attitude() -> None:
+    params = RocketParams()
+    engine = SimulationEngine(params)
+    state = State(x=0.0, z=1_000.0, vx=0.0, vz=-20.0, theta=1.57, omega=0.0, fuel=12_000.0)
+    action = Action(throttle=1.0, engine_gimbal=-params.max_gimbal, aero_steer=-1.0)
+
+    for _ in range(20):
+        state = engine.step(state, action, dt=0.1).state
+
+    assert state.theta < 0.4
+    assert state.omega < 0.0
+
+
+def test_control_surfaces_help_recover_high_lateral_speed_case_without_throttle() -> None:
+    params = RocketParams(control_surface_force_coefficient=0.75)
+    engine = SimulationEngine(params)
+    state = State(x=0.0, z=1_000.0, vx=60.0, vz=-20.0, theta=1.57, omega=0.0, fuel=12_000.0)
+    action = Action(throttle=0.0, engine_gimbal=0.0, aero_steer=-1.0)
+
+    for _ in range(20):
+        state = engine.step(state, action, dt=0.1).state
+
+    assert state.theta < 1.2
+    assert state.omega < 0.0

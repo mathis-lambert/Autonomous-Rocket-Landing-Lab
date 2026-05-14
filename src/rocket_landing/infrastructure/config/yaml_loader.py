@@ -44,12 +44,14 @@ _AERODYNAMICS_FIELDS = {
     "side_drag_coefficient",
     "center_of_pressure_offset",
     "angular_damping_coefficient",
+    "control_surface_force_coefficient",
 }
 _LANDING_FIELDS = {
     "max_landing_vz",
     "max_landing_vx",
     "max_landing_theta",
     "max_landing_omega",
+    "max_landing_x",
 }
 
 

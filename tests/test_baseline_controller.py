@@ -12,7 +12,8 @@ def test_baseline_controller_outputs_bounded_action() -> None:
     action = controller.compute_action(state, dt=0.02)
 
     assert 0.0 <= action.throttle <= 1.0
-    assert -params.max_gimbal <= action.gimbal <= params.max_gimbal
+    assert -params.max_gimbal <= action.engine_gimbal <= params.max_gimbal
+    assert -1.0 <= action.aero_steer <= 1.0
 
 
 def test_baseline_controller_tries_to_tilt_back_toward_pad() -> None:
@@ -23,4 +24,5 @@ def test_baseline_controller_tries_to_tilt_back_toward_pad() -> None:
     controller.reset(state)
     action = controller.compute_action(state, dt=0.02)
 
-    assert action.gimbal < 0.0
+    assert action.engine_gimbal < 0.0
+    assert action.aero_steer < 0.0

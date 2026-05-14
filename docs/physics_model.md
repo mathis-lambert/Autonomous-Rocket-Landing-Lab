@@ -18,13 +18,16 @@ The model currently represents:
 - gravity
 - a main engine thrust
 - engine gimbal
+- aerodynamic control surfaces through a normalized steering command
 - rigid-body rotation
 - variable mass through fuel burn
+- simple atmospheric density variation with altitude
+- passive aerodynamic forces
+- aerodynamic torques and angular damping
 - simple ground contact with no rebound
 
 The model does not yet represent:
 
-- aerodynamic drag
 - wind
 - moving center of mass
 - actuator lag
@@ -69,17 +72,18 @@ with:
 An action contains:
 
 - `throttle` in `[0, 1]`
-- `gimbal` in radians
+- `engine_gimbal` in radians
+- `aero_steer` in `[-1, 1]`
 
 Gimbal convention:
 
-- `gimbal = 0`: thrust aligned with the booster axis
-- `gimbal > 0`: thrust deflected in the positive angular direction
+- `engine_gimbal = 0`: thrust aligned with the booster axis
+- `engine_gimbal > 0`: thrust deflected in the positive angular direction
 
 The effective thrust angle is therefore:
 
 ```text
-force_angle = theta + gimbal
+force_angle = theta + engine_gimbal
 ```
 
 ## Simulated state
@@ -115,6 +119,13 @@ The main parameters live in `RocketParams`:
 - `length`
 - `radius`
 - `max_gimbal`
+- `air_density_sea_level`
+- `atmosphere_scale_height`
+- `axial_drag_coefficient`
+- `side_drag_coefficient`
+- `center_of_pressure_offset`
+- `angular_damping_coefficient`
+- `control_surface_force_coefficient`
 
 They define both the mechanical envelope and the landing/crash thresholds.
 
@@ -148,13 +159,13 @@ thrust = 0
 Thrust is projected into the world frame as:
 
 ```text
-Fx_engine = thrust * sin(theta + gimbal)
-Fz_engine = thrust * cos(theta + gimbal)
+Fx_engine = thrust * sin(theta + engine_gimbal)
+Fz_engine = thrust * cos(theta + engine_gimbal)
 ```
 
 Important consequence:
 
-- if `theta > 0` and `gimbal = 0`, thrust has a rightward horizontal component
+- if `theta > 0` and `engine_gimbal = 0`, thrust has a rightward horizontal component
 - if `theta < 0`, it pushes to the left
 
 ## Gravity
@@ -166,20 +177,79 @@ Fx_gravity = 0
 Fz_gravity = -mass * gravity
 ```
 
+## Atmosphere
+
+The current atmosphere density uses a simple exponential model:
+
+```text
+rho(z) = rho0 * exp(-z / H)
+```
+
+with:
+
+- `rho0 = air_density_sea_level`
+- `H = atmosphere_scale_height`
+
+Altitude is clamped at ground level before applying the model.
+
+## Aerodynamics
+
+The aerodynamic model works in the booster body frame.
+
+The air-relative velocity is decomposed into:
+
+- an axial component along the rocket body
+- a lateral component normal to the body
+
+This allows the simulator to distinguish:
+
+- motion aligned with the booster axis
+- sideways motion that generates much stronger restoring or destabilizing loads
+
+### Passive aerodynamic force
+
+The passive aerodynamic load uses dynamic pressure:
+
+```text
+q = 0.5 * rho * V^2
+```
+
+and computes separate axial and lateral loads using:
+
+- `axial_drag_coefficient * frontal_area`
+- `side_drag_coefficient * lateral_area`
+
+The resulting force always opposes the local air-relative motion in the body
+frame before being projected back into the world frame.
+
+### Aerodynamic control force
+
+`aero_steer` models a commanded aerodynamic side force. It is not a full fin
+model, but it is no longer a pure magic torque. The current implementation:
+
+- computes an additional lateral aerodynamic force
+- scales it with dynamic pressure
+- applies it at the center of pressure
+- lets the torque emerge from force application, not from an arbitrary direct
+  angular command
+
+### Angle of attack
+
+The simulator also computes an angle of attack-like quantity from:
+
+- booster attitude
+- air-relative velocity angle
+
+It is currently used for debug visibility and load interpretation more than for
+high-fidelity aerodynamic coefficient lookup tables.
+
 ## Total force
 
 The current force sum is:
 
 ```text
-Fx_total = Fx_engine
-Fz_total = Fz_engine - mass * gravity
+F_total = F_engine + F_gravity + F_aerodynamic
 ```
-
-Later, this can be extended with:
-
-- drag
-- wind
-- external disturbances
 
 ## Linear acceleration
 
@@ -208,6 +278,22 @@ This approximation assumes:
 
 - a main engine located below the center of mass
 - a booster approximated as a rigid slender body
+
+## Aerodynamic torque
+
+Aerodynamic torque has three components:
+
+- passive aerodynamic torque
+- control-surface torque induced by the commanded aerodynamic side force
+- angular damping torque
+
+The current implementation keeps the model readable and local:
+
+- passive and control forces are applied around a fixed center of pressure
+- angular damping is proportional to angular rate and dynamic pressure
+
+This is still simplified, but much more coherent than injecting a direct
+"control torque" with no associated force.
 
 ## Moment of inertia
 
@@ -296,12 +382,14 @@ abs(vz)    <= max_landing_vz
 abs(vx)    <= max_landing_vx
 abs(theta) <= max_landing_theta
 abs(omega) <= max_landing_omega
+abs(x)     <= max_landing_x
 ```
 
 By default, that means:
 
 - low vertical speed
 - low lateral drift
+- close to the target pad
 - small attitude error
 - low angular rate
 
@@ -382,7 +470,7 @@ to understand:
 - the core equations
 - numerical stability
 - controllability
-- future RL integration
+- future control improvements
 
 ## Recommended extensions
 
@@ -394,7 +482,7 @@ The most natural next improvements are:
 4. sensor noise
 5. randomized initial conditions
 6. a proper PID controller
-7. a Gymnasium wrapper
+7. richer scenario tooling
 
 ## Where to look in the code
 

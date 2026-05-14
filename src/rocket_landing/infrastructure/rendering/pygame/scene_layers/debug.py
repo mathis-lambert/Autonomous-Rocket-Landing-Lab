@@ -9,6 +9,7 @@ import pygame
 from rocket_landing.domain.models.action import Action
 from rocket_landing.domain.models.results import ForceBreakdown, ForceVector
 from rocket_landing.domain.models.state import State
+from rocket_landing.domain.physics.aerodynamics import AerodynamicLoads
 from rocket_landing.domain.physics.dynamics import BoosterDynamicsModel
 from rocket_landing.infrastructure.rendering.pygame.camera import SceneCamera
 from rocket_landing.infrastructure.rendering.pygame.viewport import Viewport
@@ -23,7 +24,7 @@ FORCE_VECTOR_HEAD_HALF_WIDTH_PX = 8.0
 FORCE_LABEL_MARGIN_X = 18
 FORCE_LABEL_MARGIN_Y = 88
 FORCE_LABEL_LINE_HEIGHT = 22
-FORCE_PANEL_WIDTH = 340
+FORCE_PANEL_WIDTH = 360
 FORCE_PANEL_PADDING = 12
 FORCE_PANEL_RADIUS = 6
 FORCE_PANEL_ALPHA = 176
@@ -33,9 +34,14 @@ BODY_AXIS_LENGTH_SCALE = 0.7
 BODY_AXIS_WIDTH = 2
 BODY_AXIS_COLOR = (214, 220, 232)
 AERODYNAMIC_VECTOR_COLOR = (106, 175, 255)
+CONTROL_MARKER_COLOR = (255, 255, 255)
 TEXT_SHADOW_COLOR = (0, 0, 0)
 LABEL_OFFSET_X = 10
 LABEL_OFFSET_Y = 8
+CONTROL_MARKER_LONGITUDINAL_SCALE = 0.22
+CONTROL_MARKER_LATERAL_OFFSET_SCALE = 0.9
+CONTROL_MARKER_DEFLECTION_LENGTH_PX = 14.0
+CONTROL_MARKER_RADIUS_PX = 3
 
 
 class ForceOverlayRenderer:
@@ -65,14 +71,10 @@ class ForceOverlayRenderer:
         mass = self._dynamics.current_mass(state)
         safe_action = self._dynamics.sanitize_action(action)
         thrust = self._dynamics.thrust_for(state, safe_action)
-        density = self._dynamics.atmospheric_density_for(state.z)
-        angle_of_attack = self._dynamics.angle_of_attack_for(state)
-        relative_velocity = self._dynamics.relative_air_velocity_for(state)
-        axial_speed, lateral_speed = self._dynamics.body_velocity_components_for(state)
         forces = self._dynamics.forces_for(state, safe_action)
+        aerodynamic_loads = self._dynamics.aerodynamic_loads_for(state, safe_action)
         engine_torque = self._dynamics.engine_torque_for(safe_action, thrust)
-        aerodynamic_torque = self._dynamics.aerodynamic_torque_for(state)
-        torque = engine_torque + aerodynamic_torque
+        torque = engine_torque + aerodynamic_loads.total_torque
         inertia = self._dynamics.moment_of_inertia_for(mass)
         angular_acceleration = torque / inertia if inertia > 0.0 else 0.0
 
@@ -86,6 +88,7 @@ class ForceOverlayRenderer:
 
         self._draw_body_axis(surface, origin, state.theta, params.length)
         self._draw_origin_marker(surface, origin)
+        self._draw_aero_control_markers(surface, origin, state.theta, safe_action.aero_steer)
         for label, force, color in entries:
             self._draw_force_vector(surface, origin, label, force, color)
         self._draw_panel(
@@ -94,14 +97,9 @@ class ForceOverlayRenderer:
             safe_action,
             mass,
             thrust,
-            density,
-            angle_of_attack,
-            relative_velocity,
-            axial_speed,
-            lateral_speed,
             forces,
+            aerodynamic_loads,
             engine_torque,
-            aerodynamic_torque,
             torque,
             angular_acceleration,
         )
@@ -131,6 +129,52 @@ class ForceOverlayRenderer:
 
     def _draw_origin_marker(self, surface: pygame.Surface, origin: tuple[int, int]) -> None:
         pygame.draw.circle(surface, BODY_AXIS_COLOR, origin, ORIGIN_RADIUS_PX, 2)
+
+    def _draw_aero_control_markers(
+        self,
+        surface: pygame.Surface,
+        origin: tuple[int, int],
+        theta: float,
+        aero_steer: float,
+    ) -> None:
+        axis_x, axis_z = self._dynamics.body_axis_for(theta)
+        normal_x, normal_z = self._dynamics.body_normal_for(theta)
+        longitudinal_offset = max(
+            14.0,
+            self._dynamics.params.length
+            * self._camera.pixels_per_meter
+            * CONTROL_MARKER_LONGITUDINAL_SCALE,
+        )
+        lateral_offset = max(
+            6.0,
+            self._dynamics.params.radius
+            * self._camera.pixels_per_meter
+            * CONTROL_MARKER_LATERAL_OFFSET_SCALE,
+        )
+        base_x = origin[0] + (axis_x * longitudinal_offset)
+        base_y = origin[1] - (axis_z * longitudinal_offset)
+        left_marker = (
+            int(round(base_x + (normal_x * lateral_offset))),
+            int(round(base_y - (normal_z * lateral_offset))),
+        )
+        right_marker = (
+            int(round(base_x - (normal_x * lateral_offset))),
+            int(round(base_y + (normal_z * lateral_offset))),
+        )
+        pygame.draw.circle(surface, CONTROL_MARKER_COLOR, left_marker, CONTROL_MARKER_RADIUS_PX)
+        pygame.draw.circle(surface, CONTROL_MARKER_COLOR, right_marker, CONTROL_MARKER_RADIUS_PX)
+
+        deflection = aero_steer * CONTROL_MARKER_DEFLECTION_LENGTH_PX
+        left_tip = (
+            int(round(left_marker[0] + (normal_x * deflection))),
+            int(round(left_marker[1] - (normal_z * deflection))),
+        )
+        right_tip = (
+            int(round(right_marker[0] + (normal_x * deflection))),
+            int(round(right_marker[1] - (normal_z * deflection))),
+        )
+        pygame.draw.line(surface, CONTROL_MARKER_COLOR, left_marker, left_tip, 2)
+        pygame.draw.line(surface, CONTROL_MARKER_COLOR, right_marker, right_tip, 2)
 
     def _draw_force_vector(
         self,
@@ -211,15 +255,10 @@ class ForceOverlayRenderer:
         action: Action,
         mass: float,
         thrust: float,
-        density: float,
-        angle_of_attack: float,
-        relative_velocity: ForceVector,
-        axial_speed: float,
-        lateral_speed: float,
         forces: ForceBreakdown,
+        aerodynamic_loads: AerodynamicLoads,
         engine_torque: float,
-        aerodynamic_torque: float,
-        torque: float,
+        total_torque: float,
         angular_acceleration: float,
     ) -> None:
         assert self._font is not None
@@ -228,22 +267,37 @@ class ForceOverlayRenderer:
         lines = [
             ("DEBUG", "PHYSICS"),
             ("mass", f"{mass:,.0f} kg"),
-            ("rho", f"{density:.3f} kg/m3"),
+            ("rho", f"{aerodynamic_loads.density:.3f} kg/m3"),
             ("thrust", f"{thrust / 1_000.0:,.1f} kN"),
             ("twr", f"{thrust / max(1.0, mass * self._dynamics.params.gravity):.2f}"),
-            ("v rel", f"{relative_velocity.x:+.1f} / {relative_velocity.z:+.1f} m/s"),
-            ("v body", f"{axial_speed:+.1f} / {lateral_speed:+.1f} m/s"),
+            (
+                "v rel",
+                (
+                    f"{aerodynamic_loads.relative_velocity.x:+.1f}"
+                    f" / {aerodynamic_loads.relative_velocity.z:+.1f} m/s"
+                ),
+            ),
+            (
+                "v body",
+                f"{aerodynamic_loads.axial_speed:+.1f}"
+                f" / {aerodynamic_loads.lateral_speed:+.1f} m/s",
+            ),
             ("acc", f"{forces.total.x / mass:+.2f} / {forces.total.z / mass:+.2f} m/s2"),
-            ("torque", f"{torque / 1_000.0:+.1f} kN.m"),
+            ("torque", f"{total_torque / 1_000.0:+.1f} kN.m"),
             ("eng tq", f"{engine_torque / 1_000.0:+.1f} kN.m"),
-            ("aero tq", f"{aerodynamic_torque / 1_000.0:+.1f} kN.m"),
+            ("pass tq", f"{aerodynamic_loads.passive_torque / 1_000.0:+.1f} kN.m"),
+            ("ctrl tq", f"{aerodynamic_loads.control_torque / 1_000.0:+.1f} kN.m"),
+            ("damp tq", f"{aerodynamic_loads.damping_torque / 1_000.0:+.1f} kN.m"),
             ("ang acc", f"{angular_acceleration:+.3f} rad/s2"),
             ("theta", f"{math.degrees(state.theta):+.2f} deg"),
-            ("aoa", f"{math.degrees(angle_of_attack):+.2f} deg"),
+            ("aoa", f"{math.degrees(aerodynamic_loads.angle_of_attack):+.2f} deg"),
             ("omega", f"{math.degrees(state.omega):+.2f} deg/s"),
-            ("gimbal", f"{math.degrees(action.gimbal):+.2f} deg"),
+            ("eng gmb", f"{math.degrees(action.engine_gimbal):+.2f} deg"),
+            ("aero cmd", f"{action.aero_steer * 100:+.0f}%"),
             ("engine", self._format_force_components(forces.engine)),
             ("gravity", self._format_force_components(forces.gravity)),
+            ("aero p", self._format_force_components(aerodynamic_loads.passive_force)),
+            ("aero c", self._format_force_components(aerodynamic_loads.control_force)),
             ("aero", self._format_force_components(forces.aerodynamic)),
             ("net", self._format_force_components(forces.total)),
         ]
@@ -264,7 +318,7 @@ class ForceOverlayRenderer:
             label_surface = self._font_small.render(label.upper(), True, label_color)
             value_surface = self._font_small.render(value, True, value_color)
             surface.blit(label_surface, (rect.x + FORCE_PANEL_PADDING, y))
-            surface.blit(value_surface, (rect.x + 118, y))
+            surface.blit(value_surface, (rect.x + 122, y))
 
     def _draw_panel_background(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
         panel = pygame.Surface(rect.size, pygame.SRCALPHA)
@@ -278,7 +332,8 @@ class ForceOverlayRenderer:
         )
         surface.blit(panel, rect)
 
-    def _format_force_components(self, force: ForceVector) -> str:
+    @staticmethod
+    def _format_force_components(force: ForceVector) -> str:
         magnitude_kn = math.hypot(force.x, force.z) / 1_000.0
         return (
             f"{force.x / 1_000.0:+.1f}, {force.z / 1_000.0:+.1f} kN"

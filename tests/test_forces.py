@@ -7,10 +7,11 @@ from rocket_landing.domain.physics.dynamics import BoosterDynamicsModel
 def test_clamp_action_enforces_bounds() -> None:
     params = RocketParams()
     model = BoosterDynamicsModel(params)
-    action = model.sanitize_action(Action(throttle=2.0, gimbal=1.0))
+    action = model.sanitize_action(Action(throttle=2.0, engine_gimbal=1.0, aero_steer=3.0))
 
     assert action.throttle == 1.0
-    assert action.gimbal == params.max_gimbal
+    assert action.engine_gimbal == params.max_gimbal
+    assert action.aero_steer == 1.0
 
 
 def test_zero_fuel_disables_thrust() -> None:
@@ -18,7 +19,7 @@ def test_zero_fuel_disables_thrust() -> None:
     state = State(x=0.0, z=10.0, vx=0.0, vz=0.0, theta=0.0, omega=0.0, fuel=0.0)
     model = BoosterDynamicsModel(params)
 
-    thrust = model.thrust_for(state, Action(throttle=1.0, gimbal=0.0))
+    thrust = model.thrust_for(state, Action(throttle=1.0, engine_gimbal=0.0, aero_steer=0.0))
 
     assert thrust == 0.0
 
@@ -27,7 +28,7 @@ def test_vertical_engine_force_has_no_horizontal_component_when_upright() -> Non
     params = RocketParams()
     state = State(x=0.0, z=10.0, vx=0.0, vz=0.0, theta=0.0, omega=0.0, fuel=100.0)
     model = BoosterDynamicsModel(params)
-    action = Action(throttle=1.0, gimbal=0.0)
+    action = Action(throttle=1.0, engine_gimbal=0.0, aero_steer=0.0)
     thrust = model.thrust_for(state, action)
 
     force = model.engine_force_for(state, action, thrust)
@@ -63,7 +64,10 @@ def test_drag_force_opposes_velocity() -> None:
     state = State(x=0.0, z=500.0, vx=30.0, vz=-40.0, theta=0.0, omega=0.0, fuel=100.0)
     model = BoosterDynamicsModel(params)
 
-    force = model.aerodynamic_force_for(state)
+    force = model.aerodynamic_force_for(
+        state,
+        Action(throttle=0.0, engine_gimbal=0.0, aero_steer=0.0),
+    )
 
     assert force.x < 0.0
     assert force.z > 0.0
@@ -74,7 +78,10 @@ def test_force_breakdown_sums_engine_and_gravity() -> None:
     state = State(x=0.0, z=10.0, vx=0.0, vz=0.0, theta=0.0, omega=0.0, fuel=100.0)
     model = BoosterDynamicsModel(params)
 
-    forces = model.forces_for(state, Action(throttle=0.5, gimbal=0.0))
+    forces = model.forces_for(
+        state,
+        Action(throttle=0.5, engine_gimbal=0.0, aero_steer=0.0),
+    )
 
     assert forces.engine.x == 0.0
     assert forces.gravity.x == 0.0
@@ -93,7 +100,10 @@ def test_positive_angle_of_attack_creates_restoring_aerodynamic_torque() -> None
     state = State(x=0.0, z=1_000.0, vx=10.0, vz=60.0, theta=0.4, omega=0.0, fuel=100.0)
     model = BoosterDynamicsModel(params)
 
-    torque = model.aerodynamic_torque_for(state)
+    torque = model.aerodynamic_loads_for(
+        state,
+        Action(throttle=0.0, engine_gimbal=0.0, aero_steer=0.0),
+    ).passive_torque
 
     assert torque < 0.0
 
@@ -107,16 +117,31 @@ def test_positive_omega_creates_negative_aerodynamic_damping_torque() -> None:
     state = State(x=0.0, z=1_000.0, vx=0.0, vz=60.0, theta=0.0, omega=0.4, fuel=100.0)
     model = BoosterDynamicsModel(params)
 
-    torque = model.aerodynamic_torque_for(state)
+    torque = model.aerodynamic_loads_for(
+        state,
+        Action(throttle=0.0, engine_gimbal=0.0, aero_steer=0.0),
+    ).damping_torque
 
     assert torque < 0.0
+
+
+def test_negative_aero_command_generates_negative_control_force_torque() -> None:
+    params = RocketParams(control_surface_force_coefficient=0.75)
+    state = State(x=0.0, z=1_000.0, vx=60.0, vz=-20.0, theta=1.2, omega=0.0, fuel=100.0)
+    model = BoosterDynamicsModel(params)
+    action = Action(throttle=0.0, engine_gimbal=0.0, aero_steer=-1.0)
+
+    loads = model.aerodynamic_loads_for(state, action)
+
+    assert loads.control_torque < 0.0
+    assert abs(loads.control_force.x) > 0.0 or abs(loads.control_force.z) > 0.0
 
 
 def test_positive_theta_pushes_booster_to_the_right() -> None:
     params = RocketParams()
     state = State(x=0.0, z=10.0, vx=0.0, vz=0.0, theta=0.1, omega=0.0, fuel=100.0)
     model = BoosterDynamicsModel(params)
-    action = Action(throttle=1.0, gimbal=0.0)
+    action = Action(throttle=1.0, engine_gimbal=0.0, aero_steer=0.0)
     thrust = model.thrust_for(state, action)
 
     force = model.engine_force_for(state, action, thrust)

@@ -30,13 +30,15 @@ class GroundContactResolver:
             terminated=True,
             landed=landed,
             crashed=crashed,
+            impact_state=grounded_state,
         )
 
     def _is_soft_landing(self, state: State) -> bool:
         """Check whether the grounded state satisfies all landing thresholds."""
 
         return (
-            abs(state.vz) <= self._params.max_landing_vz
+            abs(state.x) <= self._params.max_landing_x
+            and abs(state.vz) <= self._params.max_landing_vz
             and abs(state.vx) <= self._params.max_landing_vx
             and abs(state.theta) <= self._params.max_landing_theta
             and abs(state.omega) <= self._params.max_landing_omega

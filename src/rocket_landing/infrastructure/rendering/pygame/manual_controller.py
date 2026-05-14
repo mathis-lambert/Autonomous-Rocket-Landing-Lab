@@ -18,15 +18,18 @@ class PygameKeyboardManualController(FlightController):
         params: RocketParams,
         *,
         throttle_rate: float = 1.15,
-        gimbal_rate: float = 1.25,
-        gimbal_return_rate: float = 1.65,
+        engine_gimbal_rate: float = 1.25,
+        aero_steer_rate: float = 4.0,
+        steering_return_rate: float = 1.65,
     ) -> None:
         self._params = params
         self._throttle_rate = throttle_rate
-        self._gimbal_rate = gimbal_rate
-        self._gimbal_return_rate = gimbal_return_rate
+        self._engine_gimbal_rate = engine_gimbal_rate
+        self._aero_steer_rate = aero_steer_rate
+        self._steering_return_rate = steering_return_rate
         self._throttle = 0.0
-        self._gimbal = 0.0
+        self._engine_gimbal = 0.0
+        self._aero_steer = 0.0
         self._precision_mode = False
 
     @property
@@ -40,7 +43,8 @@ class PygameKeyboardManualController(FlightController):
 
         del state
         self._throttle = 0.0
-        self._gimbal = 0.0
+        self._engine_gimbal = 0.0
+        self._aero_steer = 0.0
         self._precision_mode = False
 
     def update_from_pressed_keys(
@@ -52,20 +56,36 @@ class PygameKeyboardManualController(FlightController):
 
         precision_multiplier = 0.35 if self._precision_mode else 1.0
         throttle_delta = 0.0
-        if pressed_keys[pygame.K_UP] or pressed_keys[pygame.K_w]:
+        if pressed_keys[pygame.K_UP] or pressed_keys[pygame.K_w] or pressed_keys[pygame.K_z]:
             throttle_delta += self._throttle_rate * precision_multiplier * dt
         if pressed_keys[pygame.K_DOWN] or pressed_keys[pygame.K_s]:
             throttle_delta -= self._throttle_rate * precision_multiplier * dt
         self._throttle = self._clamp(self._throttle + throttle_delta, 0.0, 1.0)
 
-        if pressed_keys[pygame.K_LEFT] or pressed_keys[pygame.K_a]:
-            self._gimbal -= self._gimbal_rate * precision_multiplier * dt
+        if pressed_keys[pygame.K_LEFT] or pressed_keys[pygame.K_a] or pressed_keys[pygame.K_q]:
+            self._engine_gimbal -= self._engine_gimbal_rate * precision_multiplier * dt
+            self._aero_steer -= self._aero_steer_rate * precision_multiplier * dt
         elif pressed_keys[pygame.K_RIGHT] or pressed_keys[pygame.K_d]:
-            self._gimbal += self._gimbal_rate * precision_multiplier * dt
+            self._engine_gimbal += self._engine_gimbal_rate * precision_multiplier * dt
+            self._aero_steer += self._aero_steer_rate * precision_multiplier * dt
         else:
-            self._gimbal = self._move_towards(self._gimbal, 0.0, self._gimbal_return_rate * dt)
+            self._engine_gimbal = self._move_towards(
+                self._engine_gimbal,
+                0.0,
+                self._steering_return_rate * dt,
+            )
+            self._aero_steer = self._move_towards(
+                self._aero_steer,
+                0.0,
+                self._steering_return_rate * 2.0 * dt,
+            )
 
-        self._gimbal = self._clamp(self._gimbal, -self._params.max_gimbal, self._params.max_gimbal)
+        self._engine_gimbal = self._clamp(
+            self._engine_gimbal,
+            -self._params.max_gimbal,
+            self._params.max_gimbal,
+        )
+        self._aero_steer = self._clamp(self._aero_steer, -1.0, 1.0)
 
     def handle_event(self, event: pygame.event.Event) -> None:
         """Handle discrete key events such as trims and precision mode."""
@@ -74,8 +94,9 @@ class PygameKeyboardManualController(FlightController):
             if event.key == pygame.K_x:
                 self._throttle = 0.0
             elif event.key == pygame.K_c:
-                self._gimbal = 0.0
-            elif event.key == pygame.K_z:
+                self._engine_gimbal = 0.0
+                self._aero_steer = 0.0
+            elif event.key == pygame.K_e:
                 self._throttle = self._clamp(self._throttle + 0.15, 0.0, 1.0)
             elif event.key == pygame.K_f:
                 self._throttle = self._clamp(self._throttle - 0.15, 0.0, 1.0)
@@ -88,7 +109,11 @@ class PygameKeyboardManualController(FlightController):
         """Return the latest manual command without inspecting the state."""
 
         del state, dt
-        return Action(throttle=self._throttle, gimbal=self._gimbal)
+        return Action(
+            throttle=self._throttle,
+            engine_gimbal=self._engine_gimbal,
+            aero_steer=self._aero_steer,
+        )
 
     @staticmethod
     def _clamp(value: float, low: float, high: float) -> float:
