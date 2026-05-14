@@ -14,6 +14,7 @@ def test_load_default_simulation_config() -> None:
     assert config.name == "default_descent"
     assert config.params.gravity == 9.81
     assert config.params.max_gimbal == 0.30
+    assert config.params.target_x == 0.0
     assert config.params.max_landing_x == 5.0
     assert config.params.axial_drag_coefficient == 0.35
     assert config.params.side_drag_coefficient == 1.15
@@ -49,6 +50,7 @@ def test_load_custom_simulation_config(tmp_path: Path) -> None:
                 "  angular_damping_coefficient: 0.07",
                 "  control_surface_force_coefficient: 0.25",
                 "landing:",
+                "  target_x: 12.0",
                 "  max_landing_vz: 2.5",
                 "  max_landing_vx: 1.0",
                 "  max_landing_theta: 0.05",
@@ -80,6 +82,7 @@ def test_load_custom_simulation_config(tmp_path: Path) -> None:
     assert config.params.axial_drag_coefficient == 0.4
     assert config.params.center_of_pressure_offset == 2.5
     assert config.params.control_surface_force_coefficient == 0.25
+    assert config.params.target_x == 12.0
     assert config.params.max_landing_x == 3.0
     assert config.initial_state.x == 10.0
     assert config.initial_state.fuel == 18.0
@@ -112,6 +115,7 @@ def test_reject_unknown_config_key(tmp_path: Path) -> None:
                 "  angular_damping_coefficient: 0.12",
                 "  control_surface_force_coefficient: 0.75",
                 "landing:",
+                "  target_x: 0.0",
                 "  max_landing_vz: 3.0",
                 "  max_landing_vx: 1.5",
                 "  max_landing_theta: 0.10",
@@ -169,6 +173,7 @@ def test_reject_non_physical_vehicle_config(tmp_path: Path) -> None:
                 "  angular_damping_coefficient: 0.12",
                 "  control_surface_force_coefficient: 0.75",
                 "landing:",
+                "  target_x: 0.0",
                 "  max_landing_vz: 3.0",
                 "  max_landing_vx: 1.5",
                 "  max_landing_theta: 0.10",
@@ -221,6 +226,7 @@ def test_reject_initial_fuel_above_vehicle_capacity(tmp_path: Path) -> None:
                 "  angular_damping_coefficient: 0.12",
                 "  control_surface_force_coefficient: 0.75",
                 "landing:",
+                "  target_x: 0.0",
                 "  max_landing_vz: 3.0",
                 "  max_landing_vx: 1.5",
                 "  max_landing_theta: 0.10",

@@ -48,6 +48,7 @@ _AERODYNAMICS_FIELDS = {
     "control_surface_force_coefficient",
 }
 _LANDING_FIELDS = {
+    "target_x",
     "max_landing_vz",
     "max_landing_vx",
     "max_landing_theta",

@@ -41,7 +41,7 @@ class GroundContactResolver:
         """Check whether the grounded state satisfies all landing thresholds."""
 
         return (
-            abs(state.x) <= self._params.max_landing_x
+            abs(state.horizontal_error(self._params.target_x)) <= self._params.max_landing_x
             and abs(state.vz) <= self._params.max_landing_vz
             and abs(state.vx) <= self._params.max_landing_vx
             and abs(state.theta) <= self._params.max_landing_theta

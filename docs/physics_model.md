@@ -25,6 +25,7 @@ The model currently represents:
 - passive aerodynamic forces
 - aerodynamic torques and angular damping
 - simple ground contact with no rebound
+- a configurable landing target on the ground
 
 The model does not yet represent:
 
@@ -33,6 +34,7 @@ The model does not yet represent:
 - actuator lag
 - noisy sensors
 - 3D / 6DOF dynamics
+- reward shaping for RL
 
 ## Conventions
 
@@ -126,6 +128,7 @@ The main parameters live in `RocketParams`:
 - `center_of_pressure_offset`
 - `angular_damping_coefficient`
 - `control_surface_force_coefficient`
+- `target_x`
 
 They define both the mechanical envelope and the landing/crash thresholds.
 
@@ -382,7 +385,13 @@ abs(vz)    <= max_landing_vz
 abs(vx)    <= max_landing_vx
 abs(theta) <= max_landing_theta
 abs(omega) <= max_landing_omega
-abs(x)     <= max_landing_x
+abs(dx)    <= max_landing_x
+```
+
+where:
+
+```text
+dx = x - target_x
 ```
 
 By default, that means:

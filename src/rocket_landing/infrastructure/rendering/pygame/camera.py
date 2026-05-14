@@ -77,7 +77,9 @@ class SceneCamera:
     def pad_screen_x(self) -> float:
         """Return the horizontal screen position of the landing pad center."""
 
-        return (self.viewport.width * 0.5) - (self.focus_x * self.pixels_per_meter)
+        return (self.viewport.width * 0.5) + (
+            (self.params.target_x - self.focus_x) * self.pixels_per_meter
+        )
 
     @property
     def ground_screen_y(self) -> float:

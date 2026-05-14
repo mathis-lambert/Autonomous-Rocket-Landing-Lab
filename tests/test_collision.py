@@ -4,10 +4,10 @@ from rocket_landing.domain.physics.collision import GroundContactResolver
 
 
 def test_ground_contact_soft_landing_is_marked_as_landed() -> None:
-    params = RocketParams()
+    params = RocketParams(target_x=2.0)
     resolver = GroundContactResolver(params)
     state = State(
-        x=0.0,
+        x=2.0,
         z=(params.length / 2.0) - 0.5,
         vx=0.2,
         vz=-1.0,
@@ -49,10 +49,10 @@ def test_ground_contact_hard_landing_is_marked_as_crashed() -> None:
 
 
 def test_ground_contact_outside_pad_is_marked_as_crashed() -> None:
-    params = RocketParams(max_landing_x=5.0)
+    params = RocketParams(target_x=10.0, max_landing_x=5.0)
     resolver = GroundContactResolver(params)
     state = State(
-        x=25.0,
+        x=25.5,
         z=(params.length / 2.0) - 0.5,
         vx=0.2,
         vz=-1.0,
@@ -66,6 +66,26 @@ def test_ground_contact_outside_pad_is_marked_as_crashed() -> None:
     assert result.terminated is True
     assert result.landed is False
     assert result.crashed is True
+
+
+def test_ground_contact_uses_relative_target_offset_for_soft_landing() -> None:
+    params = RocketParams(target_x=25.0, max_landing_x=5.0)
+    resolver = GroundContactResolver(params)
+    state = State(
+        x=28.5,
+        z=(params.length / 2.0) - 0.5,
+        vx=0.4,
+        vz=-1.2,
+        theta=0.02,
+        omega=0.03,
+        fuel=100.0,
+    )
+
+    result = resolver.resolve(state)
+
+    assert result.terminated is True
+    assert result.landed is True
+    assert result.crashed is False
 
 
 def test_ground_contact_triggers_when_bottom_crosses_ground_before_center() -> None:

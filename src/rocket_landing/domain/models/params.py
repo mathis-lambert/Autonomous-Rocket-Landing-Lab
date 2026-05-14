@@ -32,6 +32,7 @@ class RocketParams:
     center_of_pressure_offset: float = 7.0
     angular_damping_coefficient: float = 0.12
     control_surface_force_coefficient: float = 0.75
+    target_x: float = 0.0
     max_landing_vz: float = 3.0
     max_landing_vx: float = 1.5
     max_landing_theta: float = 0.10

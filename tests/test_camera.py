@@ -44,3 +44,15 @@ def test_camera_manual_zoom_controls_scale() -> None:
 
     camera.reset_zoom()
     assert camera.pixels_per_meter == initial_scale
+
+
+def test_camera_pad_screen_x_tracks_target_x() -> None:
+    viewport = Viewport(width=1280, height=720)
+    params = RocketParams(target_x=30.0)
+    camera = SceneCamera(params, viewport)
+    state = State(x=10.0, z=120.0, vx=0.0, vz=-15.0, theta=0.0, omega=0.0, fuel=8_000.0)
+
+    camera.update(state, dt=1 / 60)
+
+    expected_x, _ = camera.world_to_screen((params.target_x, 0.0))
+    assert camera.pad_screen_x == expected_x

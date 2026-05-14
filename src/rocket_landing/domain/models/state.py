@@ -34,6 +34,11 @@ class State:
     omega: float
     fuel: float
 
+    def horizontal_error(self, target_x: float) -> float:
+        """Return the signed lateral offset from the configured landing target."""
+
+        return self.x - target_x
+
     @property
     def speed(self) -> float:
         """Return the Euclidean norm of the translational velocity."""
