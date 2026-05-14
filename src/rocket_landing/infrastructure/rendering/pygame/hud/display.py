@@ -29,7 +29,7 @@ LOW_FUEL_RATIO = 0.20
 WARNING_FUEL_RATIO = 0.45
 
 HELP_TEXT = (
-    "F11 fullscreen   +/- zoom   0 reset zoom   F3 forces   TAB controller   SPACE pause   R reset"
+    "ARROWS fly   F3 forces   SPACE pause   R reset   ESC quit"
 )
 
 
@@ -45,8 +45,6 @@ class HeadsUpDisplay:
         surface: pygame.Surface,
         fonts: HudFonts,
         *,
-        mode: str,
-        controller_name: str,
         state: State,
         action: Action,
         elapsed_time: float,
@@ -72,8 +70,6 @@ class HeadsUpDisplay:
         self._draw_status_panel(
             surface,
             fonts,
-            mode=mode,
-            controller_name=controller_name,
             elapsed_time=elapsed_time,
             steps_label=steps_label,
             paused=paused,
@@ -125,8 +121,6 @@ class HeadsUpDisplay:
         surface: pygame.Surface,
         fonts: HudFonts,
         *,
-        mode: str,
-        controller_name: str,
         elapsed_time: float,
         steps_label: str,
         paused: bool,
@@ -140,10 +134,7 @@ class HeadsUpDisplay:
         )
         self._draw_panel(surface, panel)
 
-        left_lines = [
-            ("MODE", mode.upper()),
-            ("CTRL", controller_name.upper()),
-        ]
+        left_lines = [("SIM", "LIVE"), ("INPUT", "ARROWS")]
         right_lines = [
             ("TIME", self._format_time(elapsed_time)),
             ("STEP", steps_label),

@@ -69,6 +69,18 @@ class ControlledSimulationSession:
         return self._step_count
 
     @property
+    def current_frame_index(self) -> int:
+        """Return the history index corresponding to the current state."""
+
+        return len(self._history.states) - 1
+
+    @property
+    def latest_action(self) -> Action:
+        """Return the most recently recorded action sample."""
+
+        return self._history.actions[-1]
+
+    @property
     def is_finished(self) -> bool:
         """Return whether the session is terminated or exhausted."""
 

@@ -29,6 +29,12 @@ landing:
   max_landing_omega: 0.25
   max_landing_x: 5.0
 
+controls:
+  throttle_rate: 1.15
+  engine_gimbal_rate: 1.25
+  aero_steer_rate: 4.0
+  steering_return_rate: 1.65
+
 initial_state:
   x: 0.0
   z: 120.0

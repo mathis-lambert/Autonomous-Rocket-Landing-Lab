@@ -1,7 +1,7 @@
 # Rocket Landing
 
-2D booster descent and landing simulator focused on physics, control, and
-interactive visualization.
+2D booster descent and landing simulator focused on a configurable physics
+engine, precise manual control, and realistic live visualization.
 
 ## Docs
 
@@ -16,34 +16,22 @@ uv sync
 
 ## Run The Simulator
 
-Live session with manual control:
+Launch the live simulator:
 
 ```bash
-uv run rocket-landing session --controller manual
-```
-
-Live session with the scripted baseline controller:
-
-```bash
-uv run rocket-landing session --controller baseline
+uv run rocket-landing
 ```
 
 Run another YAML scenario:
 
 ```bash
-uv run rocket-landing session --controller baseline --config configs/offset_recovery.yaml
+uv run rocket-landing --config configs/offset_recovery.yaml
 ```
 
-Replay a constant-action scenario:
+Start with the force debug overlay enabled:
 
 ```bash
-uv run rocket-landing demo --throttle 0.85 --gimbal 0.02 --aero-steer 0.0
-```
-
-Export a static trajectory plot:
-
-```bash
-uv run rocket-landing demo --render-mode plot --output runs/manual_demo.png
+uv run rocket-landing --debug-forces
 ```
 
 ## Tests
@@ -62,8 +50,6 @@ src/rocket_landing/
     physics/
     simulation/
   application/
-    control/
-    services/
     use_cases/
   infrastructure/
     cli/
@@ -83,4 +69,5 @@ Each scenario currently separates:
 - `environment`
 - `aerodynamics`
 - `landing`
+- `controls`
 - `initial_state`

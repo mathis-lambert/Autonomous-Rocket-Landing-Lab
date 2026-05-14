@@ -8,9 +8,9 @@ from typing import Any
 
 import yaml
 
-from rocket_landing.application.services.configuration import SimulationConfig
 from rocket_landing.domain.models.params import RocketParams
 from rocket_landing.domain.models.state import State
+from rocket_landing.infrastructure.config.models import ManualControlConfig, SimulationConfig
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "configs" / "default.yaml"
@@ -25,6 +25,7 @@ _CONFIG_SECTIONS = {
     "environment",
     "aerodynamics",
     "landing",
+    "controls",
     "initial_state",
 }
 _VEHICLE_FIELDS = {
@@ -52,6 +53,12 @@ _LANDING_FIELDS = {
     "max_landing_theta",
     "max_landing_omega",
     "max_landing_x",
+}
+_CONTROL_FIELDS = {
+    "throttle_rate",
+    "engine_gimbal_rate",
+    "aero_steer_rate",
+    "steering_return_rate",
 }
 
 
@@ -99,12 +106,14 @@ def _parse_simulation_config(data: dict[str, Any], *, source_path: Path) -> Simu
     environment_data = _require_mapping(data, "environment", source_path=source_path)
     aerodynamics_data = _require_mapping(data, "aerodynamics", source_path=source_path)
     landing_data = _require_mapping(data, "landing", source_path=source_path)
+    controls_data = _require_mapping(data, "controls", source_path=source_path)
     initial_state_data = _require_mapping(data, "initial_state", source_path=source_path)
 
     _validate_unknown_keys("vehicle", vehicle_data, _VEHICLE_FIELDS)
     _validate_unknown_keys("environment", environment_data, _ENVIRONMENT_FIELDS)
     _validate_unknown_keys("aerodynamics", aerodynamics_data, _AERODYNAMICS_FIELDS)
     _validate_unknown_keys("landing", landing_data, _LANDING_FIELDS)
+    _validate_unknown_keys("controls", controls_data, _CONTROL_FIELDS)
     _validate_unknown_keys("initial_state", initial_state_data, _STATE_FIELDS)
 
     params_payload = {
@@ -125,12 +134,19 @@ def _parse_simulation_config(data: dict[str, Any], *, source_path: Path) -> Simu
         _STATE_FIELDS,
         source_path=source_path,
     )
+    _validate_missing_keys(
+        "controls",
+        controls_data,
+        _CONTROL_FIELDS,
+        source_path=source_path,
+    )
 
     return SimulationConfig(
         name=name.strip(),
         description=description.strip() if isinstance(description, str) else None,
         params=RocketParams(**params_payload),
         initial_state=State(**initial_state_data),
+        controls=ManualControlConfig(**controls_data),
     )
 
 

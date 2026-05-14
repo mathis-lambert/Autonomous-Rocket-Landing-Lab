@@ -1,8 +1,4 @@
-"""Pygame scene renderer for replay and live simulation frames.
-
-This renderer consumes only immutable history samples plus camera state.  It
-does not own any simulation logic and should stay a pure visualization layer.
-"""
+"""Pygame scene renderer for the live simulation view."""
 
 from __future__ import annotations
 
@@ -27,11 +23,8 @@ VELOCITY_VECTOR_SECONDS = 0.45
 MAX_VELOCITY_VECTOR_LENGTH_PX = 120.0
 
 
-class PygameReplayScene:
-    """Draw the world background, guides, trajectory and booster sprite.
-
-    The same scene object is reused both for replay windows and live sessions.
-    """
+class PygameSimulationScene:
+    """Draw the live world background, trajectory, debug vectors and booster."""
 
     def __init__(
         self,
@@ -66,12 +59,12 @@ class PygameReplayScene:
         *,
         dt: float = 0.0,
     ) -> None:
-        """Render one frame from the recorded simulation history.
+        """Render one frame from the live simulation history.
 
         Args:
             surface: Target pygame surface.
-            history: Recorded time-series buffers for the scenario.
-            frame_index: Index of the state/action sample to display.
+            history: Time-series buffers recorded by the live session.
+            frame_index: Index of the sample to display.
             dt: Presentation delta time used only for camera smoothing.
         """
 

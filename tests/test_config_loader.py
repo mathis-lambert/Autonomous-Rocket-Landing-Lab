@@ -20,6 +20,8 @@ def test_load_default_simulation_config() -> None:
     assert config.params.control_surface_force_coefficient == 0.75
     assert config.initial_state.z == 120.0
     assert config.initial_state.fuel == 12_000.0
+    assert config.controls.throttle_rate == 1.15
+    assert config.controls.steering_return_rate == 1.65
 
 
 def test_load_custom_simulation_config(tmp_path: Path) -> None:
@@ -52,6 +54,11 @@ def test_load_custom_simulation_config(tmp_path: Path) -> None:
                 "  max_landing_theta: 0.05",
                 "  max_landing_omega: 0.1",
                 "  max_landing_x: 3.0",
+                "controls:",
+                "  throttle_rate: 0.8",
+                "  engine_gimbal_rate: 1.5",
+                "  aero_steer_rate: 3.2",
+                "  steering_return_rate: 1.1",
                 "initial_state:",
                 "  x: 10.0",
                 "  z: 250.0",
@@ -76,6 +83,8 @@ def test_load_custom_simulation_config(tmp_path: Path) -> None:
     assert config.params.max_landing_x == 3.0
     assert config.initial_state.x == 10.0
     assert config.initial_state.fuel == 18.0
+    assert config.controls.engine_gimbal_rate == 1.5
+    assert config.controls.aero_steer_rate == 3.2
 
 
 def test_reject_unknown_config_key(tmp_path: Path) -> None:
@@ -108,6 +117,11 @@ def test_reject_unknown_config_key(tmp_path: Path) -> None:
                 "  max_landing_theta: 0.10",
                 "  max_landing_omega: 0.25",
                 "  max_landing_x: 5.0",
+                "controls:",
+                "  throttle_rate: 1.15",
+                "  engine_gimbal_rate: 1.25",
+                "  aero_steer_rate: 4.0",
+                "  steering_return_rate: 1.65",
                 "initial_state:",
                 "  x: 0.0",
                 "  z: 120.0",

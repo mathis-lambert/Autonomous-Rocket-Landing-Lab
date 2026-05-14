@@ -20,7 +20,8 @@ def test_controlled_session_reset_creates_initial_history_point() -> None:
         initial_state=initial_state,
     )
 
-    assert len(session.history.states) == 1
+    assert session.current_frame_index == 0
+    assert session.latest_action == Action.neutral()
     assert session.step_count == 0
     assert session.is_finished is False
     assert session.state == initial_state
@@ -43,7 +44,8 @@ def test_controlled_session_step_appends_history() -> None:
 
     result = session.step(Action(throttle=0.0, engine_gimbal=0.0, aero_steer=0.0))
 
-    assert len(session.history.states) == 2
+    assert session.current_frame_index == 1
+    assert session.latest_action == Action(throttle=0.0, engine_gimbal=0.0, aero_steer=0.0)
     assert session.step_count == 1
     assert result.state.z < session.history.states[0].z
 
@@ -69,4 +71,5 @@ def test_controlled_session_reset_restores_configured_initial_state() -> None:
 
     assert session.state == initial_state
     assert session.step_count == 0
-    assert len(session.history.states) == 1
+    assert session.current_frame_index == 0
+    assert session.latest_action == Action.neutral()
