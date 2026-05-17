@@ -7,13 +7,13 @@ from collections.abc import Callable
 import numpy as np
 import pygame
 
-from rocket_landing.application.rl.env import RocketLanderEnv
 from rocket_landing.infrastructure.rendering.pygame.assets import SpriteAssetLoader, SpriteBundle
 from rocket_landing.infrastructure.rendering.pygame.camera import SceneCamera
 from rocket_landing.infrastructure.rendering.pygame.display import create_display, enable_high_dpi
 from rocket_landing.infrastructure.rendering.pygame.hud import HeadsUpDisplay, HudFonts
 from rocket_landing.infrastructure.rendering.pygame.scene import PygameSimulationScene
 from rocket_landing.infrastructure.rendering.pygame.viewport import Viewport
+from rocket_landing.rl.env import RocketLanderEnv
 
 PolicyFn = Callable[[np.ndarray], np.ndarray]
 

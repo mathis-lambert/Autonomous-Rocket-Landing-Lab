@@ -12,6 +12,7 @@ engine, precise manual control, and realistic live visualization.
 
 ```bash
 uv sync
+uv sync --group rl
 ```
 
 ## Run The Simulator
@@ -40,6 +41,33 @@ uv run rocket-landing --debug-forces
 uv run pytest
 uv run ruff check src tests
 ```
+
+## RL Training
+
+Train SAC with the rebuilt, stage-aligned pipeline:
+
+```bash
+uv run python scripts/train_rl.py \
+  --run-name curriculum_guard_v2 \
+  --timesteps 1500000 \
+  --segment-timesteps 25000 \
+  --eval-episodes 50 \
+  --benchmark-episodes 200 \
+  --n-envs 4 \
+  --seeds 0 \
+  --benchmark-stage full_envelope
+```
+
+Evaluate one saved model on a specific stage:
+
+```bash
+uv run python scripts/eval_rl.py artifacts/rl/my_run_seed0/models/final_model.zip --stage full_envelope --episodes 100
+```
+
+The default curriculum now bridges into the final envelope through
+`wide_recovery` and `full_envelope_nominal_fuel` before training on the low-fuel
+`full_envelope` distribution. Evaluation reports include truncation reason
+rates so failed stages can be diagnosed without replaying every episode.
 
 ## Repository Layout
 
