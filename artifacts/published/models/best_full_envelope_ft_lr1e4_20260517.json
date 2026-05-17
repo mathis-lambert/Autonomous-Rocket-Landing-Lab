@@ -1,0 +1,20 @@
+{
+  "label": "best_full_envelope_ft_lr1e4_20260517",
+  "type": "sac_checkpoint",
+  "scenario": "default_descent",
+  "selected_for": "published_artifact",
+  "source_run": "resume_full_envelope_lr1e4_20260517_090443",
+  "source_model_path": "artifacts/rl/resume_full_envelope_lr1e4_20260517_090443_seed0/models/best_model.zip",
+  "stage": "full_envelope",
+  "selection_step": 150000,
+  "selection_eval_episodes": 50,
+  "selection_success_rate": 0.56,
+  "final_benchmark_episodes": 200,
+  "final_benchmark_success_rate": 0.225,
+  "final_benchmark_crash_rate": 0.265,
+  "final_benchmark_truncation_rate": 0.51,
+  "final_benchmark_mean_abs_final_dx": 5.989430377350476,
+  "final_benchmark_mean_abs_final_vx": 0.48146919020524487,
+  "final_benchmark_mean_abs_final_vz": 2.1423545947886535,
+  "sha256": "a518cdb0da38874d688b36f8e763716fe24f77aed8da7979293e4e050036de03"
+}
