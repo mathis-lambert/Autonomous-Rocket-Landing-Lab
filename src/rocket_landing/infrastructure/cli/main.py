@@ -69,8 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--policy-stage",
-        default="full_envelope",
-        help="Curriculum stage used to reset the RL environment for policy playback",
+        help="Optional curriculum stage used to reset the RL environment for policy playback",
     )
     return parser
 
@@ -109,16 +108,19 @@ def run_live_session(args: argparse.Namespace) -> int:
         reward_config=RewardConfig(),
         default_initial_state=config.initial_state,
     )
-    stage = find_stage_by_name(build_default_curriculum(config.params), args.policy_stage)
-    env.apply_curriculum_stage(stage)
     model = load_sac_model(args.policy_model)
+    stage_name_suffix = config.name
+    if args.policy_stage is not None:
+        stage = find_stage_by_name(build_default_curriculum(config.params), args.policy_stage)
+        env.apply_curriculum_stage(stage)
+        stage_name_suffix = stage.name
     app = PygamePolicySimulationApp(
         env,
         policy_fn=lambda obs: model.predict(obs, deterministic=True)[0],
         show_force_vectors=args.debug_forces,
         force_vector_scale_px_per_kn=args.force_vector_scale,
     )
-    app.run(title=f"Rocket landing policy playback | {config.name} | {stage.name}")
+    app.run(title=f"Rocket landing policy playback | {config.name} | {stage_name_suffix}")
     return 0
 
 
