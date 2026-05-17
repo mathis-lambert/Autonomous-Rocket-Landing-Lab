@@ -56,7 +56,8 @@ def build_observation(state: State, params: RocketParams) -> np.ndarray:
         ],
         dtype=np.float32,
     )
-    return raw / OBSERVATION_SCALE
+    normalized = raw / OBSERVATION_SCALE
+    return np.clip(normalized, OBSERVATION_LOW, OBSERVATION_HIGH)
 
 
 def decode_action(raw_action: np.ndarray, params: RocketParams) -> Action:

@@ -11,6 +11,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 from rocket_landing.rl.curriculum import CurriculumScheduler, meets_promotion_criteria
 from rocket_landing.rl.env import RocketLanderEnv
 from rocket_landing.rl.evaluation import EvaluationReport, evaluate_policy
@@ -59,6 +61,11 @@ def prepare_training_paths(output_dir: Path, run_name: str) -> TrainingPaths:
     """Create directory structure for one run."""
 
     run_dir = output_dir / run_name
+    if run_dir.exists():
+        raise FileExistsError(
+            f"training run directory already exists: {run_dir}. "
+            "choose a new run name instead of reusing an old run directory"
+        )
     checkpoints_dir = run_dir / "checkpoints"
     evaluations_dir = run_dir / "evaluations"
     tensorboard_dir = run_dir / "tensorboard"
@@ -246,6 +253,27 @@ def _make_vec_env(env_factory: EnvFactory, n_envs: int) -> Any:
     return VecMonitor(SubprocVecEnv(env_fns, start_method=start_method))
 
 
+def _validate_training_config(config: TrainingConfig) -> None:
+    """Validate trainer settings before any filesystem or SB3 side effect."""
+
+    if config.total_timesteps <= 0 or config.segment_timesteps <= 0:
+        raise ValueError("timesteps and segment timesteps must be positive")
+    if config.n_envs <= 0:
+        raise ValueError("n_envs must be positive")
+    if config.checkpoints.save_freq_timesteps <= 0:
+        raise ValueError("checkpoint save frequency must be positive")
+
+
+def _sync_model_with_env(model: Any, env: Any) -> None:
+    """Reset the vectorized env and align SB3 cached rollout state with it."""
+
+    observations = env.reset()
+    model._last_obs = observations
+    model._last_episode_starts = np.ones((env.num_envs,), dtype=bool)
+    if getattr(model, "_vec_normalize_env", None) is not None:
+        model._last_original_obs = model._vec_normalize_env.get_original_obs()
+
+
 def train_sac(
     *,
     env_factory: EnvFactory,
@@ -257,10 +285,7 @@ def train_sac(
 ) -> TrainingSummary:
     """Train SAC and persist checkpoints and evaluation reports."""
 
-    if config.total_timesteps <= 0 or config.segment_timesteps <= 0:
-        raise ValueError("timesteps and segment timesteps must be positive")
-    if config.n_envs <= 0:
-        raise ValueError("n_envs must be positive")
+    _validate_training_config(config)
 
     paths = prepare_training_paths(output_dir, run_name)
     _save_json(
@@ -292,6 +317,7 @@ def train_sac(
     else:
         model = load_sac_model(initial_model_path, env=train_env, device=config.sac.device)
         _apply_sac_runtime_overrides(model, config=config)
+        _sync_model_with_env(model, train_env)
 
     total_trained = 0
     next_checkpoint = config.checkpoints.save_freq_timesteps
@@ -307,12 +333,13 @@ def train_sac(
 
     while total_trained < config.total_timesteps:
         segment = min(config.segment_timesteps, config.total_timesteps - total_trained)
+        previous_num_timesteps = int(model.num_timesteps)
         model.learn(
             total_timesteps=segment,
             reset_num_timesteps=False,
             progress_bar=config.progress_bar,
         )
-        total_trained += segment
+        total_trained += int(model.num_timesteps) - previous_num_timesteps
         report = evaluate_policy(
             eval_env,
             lambda obs, local_model=model: local_model.predict(
@@ -379,6 +406,7 @@ def train_sac(
             model = load_sac_model(best.path, env=train_env, device=config.sac.device)
             train_env.env_method("apply_curriculum_stage", current_stage)
             eval_env.apply_curriculum_stage(current_stage)
+            _sync_model_with_env(model, train_env)
             _save_json(paths.run_dir / "rollback_events.json", {"events": rollback_events})
             continue
 
@@ -424,6 +452,7 @@ def train_sac(
             if curriculum is not None:
                 train_env.env_method("apply_curriculum_stage", curriculum.current_stage)
                 eval_env.apply_curriculum_stage(curriculum.current_stage)
+                _sync_model_with_env(model, train_env)
 
     model.save((paths.models_dir / "final_model.zip").as_posix())
     train_env.close()

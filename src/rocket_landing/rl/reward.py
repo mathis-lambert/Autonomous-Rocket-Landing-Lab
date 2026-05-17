@@ -2,18 +2,13 @@
 
 from __future__ import annotations
 
-import math
 from dataclasses import asdict, dataclass
 
 from rocket_landing.domain.models.action import Action
 from rocket_landing.domain.models.params import RocketParams
 from rocket_landing.domain.models.results import StepResult
-from rocket_landing.domain.models.state import State
+from rocket_landing.domain.models.state import State, orientation_error
 from rocket_landing.rl.types import RewardConfig
-
-
-def _wrapped_angle_error(theta: float) -> float:
-    return abs(math.atan2(math.sin(theta), math.cos(theta)))
 
 
 def _fuel_ratio_for(state: State, params: RocketParams) -> float:
@@ -117,7 +112,7 @@ def compute_reward(
         guidance_vx=-guidance * weights.guidance_vx * abs(state.vx),
         vx=-weights.vx * abs(state.vx),
         vz=-weights.vz * abs(state.vz),
-        tilt=-weights.tilt * _wrapped_angle_error(state.theta),
+        tilt=-weights.tilt * orientation_error(state.theta),
         omega=-weights.omega * abs(state.omega),
         near_ground_vx=-near_ground
         * weights.near_ground_vx
@@ -128,7 +123,7 @@ def compute_reward(
         near_ground_tilt=(
             -near_ground
             * weights.near_ground_tilt
-            * max(0.0, _wrapped_angle_error(state.theta) - params.max_landing_theta)
+            * max(0.0, orientation_error(state.theta) - params.max_landing_theta)
         ),
         near_ground_omega=(
             -near_ground

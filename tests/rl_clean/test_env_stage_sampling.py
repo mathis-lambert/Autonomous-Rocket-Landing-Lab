@@ -1,6 +1,8 @@
 import numpy as np
 
 from rocket_landing.domain.models.params import RocketParams
+from rocket_landing.domain.models.state import State
+from rocket_landing.domain.physics.collision import GroundContactResolver
 from rocket_landing.rl import (
     EnvConfig,
     RewardConfig,
@@ -8,7 +10,7 @@ from rocket_landing.rl import (
     build_default_curriculum,
     find_stage_by_name,
 )
-from rocket_landing.rl.env import OBSERVATION_SCALE
+from rocket_landing.rl.env import OBSERVATION_SCALE, build_observation
 
 
 def test_touchdown_stage_sampling_range() -> None:
@@ -53,3 +55,40 @@ def test_terminal_info_includes_truncation_reason() -> None:
     assert info["truncation_reason"] == "max_episode_steps"
     assert info["episode"]["truncation_reason"] == "max_episode_steps"
     env.close()
+
+
+def test_observation_is_clipped_to_declared_box() -> None:
+    params = RocketParams()
+    env = RocketLanderEnv(params, env_config=EnvConfig(), reward_config=RewardConfig())
+
+    raw_state = State(
+        x=params.target_x + 500.0,
+        z=800.0,
+        vx=200.0,
+        vz=-200.0,
+        theta=0.0,
+        omega=20.0,
+        fuel=params.initial_fuel * 2.0,
+    )
+    encoded = build_observation(raw_state, params)
+
+    assert env.observation_space.contains(encoded)
+    assert np.all(encoded <= 1.0)
+    assert np.all(encoded >= -1.0)
+    env.close()
+
+
+def test_soft_landing_uses_wrapped_attitude_error() -> None:
+    params = RocketParams()
+    resolver = GroundContactResolver(params)
+    grounded_state = State(
+        x=params.target_x,
+        z=params.length * 0.5,
+        vx=0.0,
+        vz=0.0,
+        theta=(2.0 * np.pi) + (0.5 * params.max_landing_theta),
+        omega=0.0,
+        fuel=params.initial_fuel,
+    )
+
+    assert resolver._is_soft_landing(grounded_state)

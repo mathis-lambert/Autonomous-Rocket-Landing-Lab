@@ -14,6 +14,7 @@ from rocket_landing.rl import (
     TrainingConfig,
     train_sac,
 )
+from rocket_landing.rl.types import CheckpointConfig
 
 
 def test_train_sac_smoke(tmp_path: Path) -> None:
@@ -84,3 +85,51 @@ def test_train_sac_can_resume_from_checkpoint(tmp_path: Path) -> None:
     assert resumed.total_timesteps == 16
     assert manifest["initial_model_path"] == resume_checkpoint.as_posix()
     assert (tmp_path / "resumed" / "models" / "final_model.zip").exists()
+
+
+def test_train_sac_rejects_existing_run_directory(tmp_path: Path) -> None:
+    params = RocketParams()
+    (tmp_path / "existing").mkdir()
+
+    def env_factory() -> RocketLanderEnv:
+        return RocketLanderEnv(params, env_config=EnvConfig(), reward_config=RewardConfig())
+
+    with pytest.raises(FileExistsError):
+        train_sac(
+            env_factory=env_factory,
+            output_dir=tmp_path,
+            run_name="existing",
+            config=TrainingConfig(
+                total_timesteps=16,
+                segment_timesteps=16,
+                n_envs=1,
+                seed=0,
+                progress_bar=False,
+                evaluation=EvaluationConfig(episodes=2, seed=0),
+            ),
+            curriculum=None,
+        )
+
+
+def test_train_sac_requires_positive_checkpoint_frequency(tmp_path: Path) -> None:
+    params = RocketParams()
+
+    def env_factory() -> RocketLanderEnv:
+        return RocketLanderEnv(params, env_config=EnvConfig(), reward_config=RewardConfig())
+
+    with pytest.raises(ValueError, match="checkpoint save frequency"):
+        train_sac(
+            env_factory=env_factory,
+            output_dir=tmp_path,
+            run_name="bad_checkpoints",
+            config=TrainingConfig(
+                total_timesteps=16,
+                segment_timesteps=16,
+                n_envs=1,
+                seed=0,
+                progress_bar=False,
+                evaluation=EvaluationConfig(episodes=2, seed=0),
+                checkpoints=CheckpointConfig(save_freq_timesteps=0),
+            ),
+            curriculum=None,
+        )

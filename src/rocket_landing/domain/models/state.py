@@ -9,7 +9,14 @@ The project uses a 2D planar convention:
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
+
+
+def orientation_error(theta: float) -> float:
+    """Return the smallest physically equivalent attitude error in radians."""
+
+    return abs(math.atan2(math.sin(theta), math.cos(theta)))
 
 
 @dataclass(frozen=True, slots=True)
