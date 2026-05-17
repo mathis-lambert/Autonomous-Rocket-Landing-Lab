@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 import numpy as np
 
+from rocket_landing.domain.models.state import State
 from rocket_landing.infrastructure.rendering.pygame.app import PygameSimulationApp
 from rocket_landing.infrastructure.rendering.pygame.controllers.policy import PolicyController
 from rocket_landing.infrastructure.rendering.pygame.runtime import EnvironmentRuntime
@@ -23,6 +24,7 @@ class PygamePolicySimulationApp(PygameSimulationApp):
         env: RocketLanderEnv,
         *,
         policy_fn: PolicyFn,
+        initial_state: State | None = None,
         viewport: Viewport | None = None,
         show_force_vectors: bool = False,
         force_vector_scale_px_per_kn: float = 0.065,
@@ -34,7 +36,7 @@ class PygamePolicySimulationApp(PygameSimulationApp):
         )
         super().__init__(
             env.params,
-            EnvironmentRuntime(env),
+            EnvironmentRuntime(env, reset_state=initial_state),
             controller=controller,
             viewport=viewport,
             show_force_vectors=show_force_vectors,

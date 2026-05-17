@@ -102,6 +102,7 @@ class EnvironmentRuntime:
     """Adapter around the RL environment for policy playback."""
 
     env: RocketLanderEnv
+    reset_state: State | None = None
 
     @property
     def state(self) -> State:
@@ -140,7 +141,10 @@ class EnvironmentRuntime:
         return self.env.session.max_steps
 
     def reset(self) -> None:
-        self.env.reset()
+        options = None
+        if self.reset_state is not None:
+            options = {"initial_state": self.reset_state}
+        self.env.reset(options=options)
 
     def step(self, action: Action) -> None:
         self.env.step_domain_action(action)

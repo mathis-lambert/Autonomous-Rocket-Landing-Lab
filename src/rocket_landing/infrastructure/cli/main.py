@@ -109,14 +109,17 @@ def run_live_session(args: argparse.Namespace) -> int:
         default_initial_state=config.initial_state,
     )
     model = load_sac_model(args.policy_model)
+    initial_state = config.initial_state
     stage_name_suffix = config.name
     if args.policy_stage is not None:
         stage = find_stage_by_name(build_default_curriculum(config.params), args.policy_stage)
         env.apply_curriculum_stage(stage)
         stage_name_suffix = stage.name
+        initial_state = None
     app = PygamePolicySimulationApp(
         env,
         policy_fn=lambda obs: model.predict(obs, deterministic=True)[0],
+        initial_state=initial_state,
         show_force_vectors=args.debug_forces,
         force_vector_scale_px_per_kn=args.force_vector_scale,
     )
