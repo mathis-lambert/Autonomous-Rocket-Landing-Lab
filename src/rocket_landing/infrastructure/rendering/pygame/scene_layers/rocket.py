@@ -8,6 +8,7 @@ import pygame
 
 from rocket_landing.domain.models.params import RocketParams
 from rocket_landing.domain.models.state import State
+from rocket_landing.domain.physics.geometry import BoosterGeometry
 from rocket_landing.infrastructure.rendering.pygame.assets import SpriteBundle
 from rocket_landing.infrastructure.rendering.pygame.camera import SceneCamera
 
@@ -31,6 +32,7 @@ class RocketRenderer:
         self._params = params
         self._assets = assets
         self._camera = camera
+        self._geometry = BoosterGeometry(params)
 
     def draw(self, surface: pygame.Surface, state: State, throttle: float) -> None:
         """Draw the rocket and its ground shadow."""
@@ -43,7 +45,8 @@ class RocketRenderer:
             state.theta,
             min_body_height=min_body_height,
         )
-        rocket_anchor = self._camera.world_to_screen((state.x, state.z))
+        base_point, _top_point = self._geometry.segment_endpoints(state)
+        rocket_anchor = self._camera.world_to_screen(base_point)
 
         self._draw_ground_shadow(surface, state, rocket_anchor)
         rect = self._anchored_rect(sprite_surface, sprite, state.theta, rocket_anchor, sprite_scale)
@@ -72,7 +75,10 @@ class RocketRenderer:
         )
         shadow_radius_x = max(
             SHADOW_MIN_RADIUS_X,
-            int(SHADOW_BASE_RADIUS_X / (1.0 + (state.z * SHADOW_ALTITUDE_FALLOFF))),
+            int(
+                SHADOW_BASE_RADIUS_X
+                / (1.0 + (state.ground_clearance(self._params.length) * SHADOW_ALTITUDE_FALLOFF))
+            ),
         )
         shadow_radius_y = max(1, int(shadow_radius_x * SHADOW_HEIGHT_RATIO))
 
