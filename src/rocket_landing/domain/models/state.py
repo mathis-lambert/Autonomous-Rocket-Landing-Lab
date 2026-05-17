@@ -9,7 +9,14 @@ The project uses a 2D planar convention:
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
+
+
+def orientation_error(theta: float) -> float:
+    """Return the smallest physically equivalent attitude error in radians."""
+
+    return abs(math.atan2(math.sin(theta), math.cos(theta)))
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +45,11 @@ class State:
         """Return the signed lateral offset from the configured landing target."""
 
         return self.x - target_x
+
+    def ground_clearance(self, body_length: float) -> float:
+        """Return the clearance between the booster base and the ground."""
+
+        return max(0.0, self.z - (0.5 * body_length))
 
     @property
     def speed(self) -> float:

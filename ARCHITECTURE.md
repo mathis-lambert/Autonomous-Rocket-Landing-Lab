@@ -7,7 +7,8 @@ This project is structured as a small layered simulator.
 The codebase aims to stay simple:
 
 - a pure simulation core
-- a thin application layer for controllers and use cases
+- a thin application layer for use cases
+- a dedicated RL layer for training/evaluation
 - infrastructure adapters for CLI and rendering
 
 ## Overview
@@ -16,7 +17,7 @@ The codebase aims to stay simple:
 CLI / Pygame / Matplotlib
           |
           v
-application.use_cases + application.control
+application.use_cases + rl
           |
           v
 domain.simulation -> domain.physics -> domain.models
@@ -30,9 +31,8 @@ src/rocket_landing/
     models/
     physics/
     simulation/
+  rl/
   application/
-    control/
-    services/
     use_cases/
   infrastructure/
     cli/
@@ -56,12 +56,23 @@ This layer does not depend on `pygame`, `matplotlib`, or the CLI.
 
 The `application` layer orchestrates use cases around the simulator.
 
-- `application.control`
-  Controller interfaces and deterministic controllers.
 - `application.use_cases`
   Constant-action runs and live controlled sessions.
-- `application.services`
-  Resolved configuration objects shared by the CLI.
+
+## RL
+
+The `rl` layer contains the policy training and evaluation stack.
+
+- `rl.env`
+  Gymnasium environment around the simulator.
+- `rl.reward`
+  Reward shaping and terminal summaries, including guidance terms for high
+  altitude lateral recovery.
+- `rl.curriculum`
+  Progressive stage configuration and promotion rules. Promotion checks success,
+  crashes, truncations, and terminal constraint metrics before moving forward.
+- `rl.sb3`
+  SAC training loop, checkpoints, and evaluation reports.
 
 ## Infrastructure
 

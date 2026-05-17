@@ -6,7 +6,7 @@ from dataclasses import replace
 
 from rocket_landing.domain.models.params import RocketParams
 from rocket_landing.domain.models.results import StepResult
-from rocket_landing.domain.models.state import State
+from rocket_landing.domain.models.state import State, orientation_error
 from rocket_landing.domain.physics.geometry import BoosterGeometry
 
 
@@ -44,6 +44,6 @@ class GroundContactResolver:
             abs(state.horizontal_error(self._params.target_x)) <= self._params.max_landing_x
             and abs(state.vz) <= self._params.max_landing_vz
             and abs(state.vx) <= self._params.max_landing_vx
-            and abs(state.theta) <= self._params.max_landing_theta
+            and orientation_error(state.theta) <= self._params.max_landing_theta
             and abs(state.omega) <= self._params.max_landing_omega
         )

@@ -12,3 +12,5 @@ wheels/
 *.glb
 
 artifacts/*
+!artifacts/published/
+!artifacts/published/**

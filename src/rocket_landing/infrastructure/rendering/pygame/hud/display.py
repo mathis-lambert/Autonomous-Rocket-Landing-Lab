@@ -94,8 +94,9 @@ class HeadsUpDisplay:
         surface.blit(title, (bar.x + 14, bar.y + 10))
         surface.blit(status, (bar.x + 15, bar.y + 35))
 
+        ground_clearance = state.ground_clearance(self._params.length)
         metrics = [
-            ("ALT", f"{state.z:,.0f} m", self._viewport.accent),
+            ("AGL", f"{ground_clearance:,.0f} m", self._viewport.accent),
             ("V", f"{state.speed:,.1f} m/s", self._viewport.accent),
             ("VZ", f"{state.vz:+.1f}", self._velocity_color(state.vz)),
             ("FUEL", f"{fuel_ratio * 100:.0f}%", self._fuel_color(fuel_ratio)),
