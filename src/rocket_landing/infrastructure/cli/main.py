@@ -12,6 +12,15 @@ from rocket_landing.infrastructure.rendering.pygame.live_app import PygameLiveSi
 from rocket_landing.infrastructure.rendering.pygame.manual_controller import (
     PygameKeyboardManualController,
 )
+from rocket_landing.infrastructure.rendering.pygame.policy_app import PygamePolicySimulationApp
+from rocket_landing.rl import (
+    EnvConfig,
+    RewardConfig,
+    RocketLanderEnv,
+    build_default_curriculum,
+    find_stage_by_name,
+    load_sac_model,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -47,6 +56,22 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.065,
         help="Debug overlay scale in pixels per kilonewton",
     )
+    parser.add_argument(
+        "--controller",
+        choices=("manual", "policy"),
+        default="manual",
+        help="Controller backend to drive the simulator",
+    )
+    parser.add_argument(
+        "--policy-model",
+        type=Path,
+        help="Stable-Baselines3 policy checkpoint to replay in pygame",
+    )
+    parser.add_argument(
+        "--policy-stage",
+        default="full_envelope",
+        help="Curriculum stage used to reset the RL environment for policy playback",
+    )
     return parser
 
 
@@ -57,21 +82,43 @@ def run_live_session(args: argparse.Namespace) -> int:
         raise ValueError("force_vector_scale must be strictly positive")
 
     config = load_simulation_config(args.config)
-    session = ControlledSimulationSession(
-        params=config.params,
-        dt=args.dt,
-        initial_state=config.initial_state,
-        max_steps=args.steps,
-    )
-    controller = PygameKeyboardManualController(config.params, config.controls)
-    app = PygameLiveSimulationApp(
+    if args.controller == "manual":
+        session = ControlledSimulationSession(
+            params=config.params,
+            dt=args.dt,
+            initial_state=config.initial_state,
+            max_steps=args.steps,
+        )
+        controller = PygameKeyboardManualController(config.params, config.controls)
+        app = PygameLiveSimulationApp(
+            config.params,
+            session,
+            controller=controller,
+            show_force_vectors=args.debug_forces,
+            force_vector_scale_px_per_kn=args.force_vector_scale,
+        )
+        app.run(title=f"Rocket landing live session | {config.name}")
+        return 0
+
+    if args.policy_model is None:
+        raise ValueError("--policy-model is required when --controller=policy")
+
+    env = RocketLanderEnv(
         config.params,
-        session,
-        controller=controller,
+        env_config=EnvConfig(dt=args.dt, max_episode_steps=args.steps),
+        reward_config=RewardConfig(),
+        default_initial_state=config.initial_state,
+    )
+    stage = find_stage_by_name(build_default_curriculum(config.params), args.policy_stage)
+    env.apply_curriculum_stage(stage)
+    model = load_sac_model(args.policy_model)
+    app = PygamePolicySimulationApp(
+        env,
+        policy_fn=lambda obs: model.predict(obs, deterministic=True)[0],
         show_force_vectors=args.debug_forces,
         force_vector_scale_px_per_kn=args.force_vector_scale,
     )
-    app.run(title=f"Rocket landing live session | {config.name}")
+    app.run(title=f"Rocket landing policy playback | {config.name} | {stage.name}")
     return 0
 
 

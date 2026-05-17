@@ -140,6 +140,12 @@ class RocketLanderEnv(gym.Env):
     def current_stage_name(self) -> str:
         return self._stage_name
 
+    @property
+    def episode_finished(self) -> bool:
+        """Return whether the current episode ended and needs a reset."""
+
+        return self._needs_reset
+
     def reset(
         self,
         *,
@@ -162,9 +168,19 @@ class RocketLanderEnv(gym.Env):
     ) -> tuple[np.ndarray, float, bool, bool, dict[str, object]]:
         if self._needs_reset:
             raise RuntimeError("environment must be reset before calling step()")
-        previous_state = self._session.state
         domain_action = decode_action(action, self._params)
-        result = self._session.step(domain_action)
+        return self.step_domain_action(domain_action)
+
+    def step_domain_action(
+        self,
+        action: Action,
+    ) -> tuple[np.ndarray, float, bool, bool, dict[str, object]]:
+        """Advance the environment from a domain action instead of a raw policy vector."""
+
+        if self._needs_reset:
+            raise RuntimeError("environment must be reset before calling step()")
+        previous_state = self._session.state
+        result = self._session.step(action)
 
         terminated = result.terminated
         truncation_reason = None
@@ -178,7 +194,7 @@ class RocketLanderEnv(gym.Env):
             )
         truncated = truncation_reason is not None
         reward = compute_reward(
-            action=domain_action,
+            action=action,
             previous_state=previous_state,
             result=result,
             params=self._params,

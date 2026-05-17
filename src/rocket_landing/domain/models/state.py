@@ -46,6 +46,11 @@ class State:
 
         return self.x - target_x
 
+    def ground_clearance(self, body_length: float) -> float:
+        """Return the clearance between the booster base and the ground."""
+
+        return max(0.0, self.z - (0.5 * body_length))
+
     @property
     def speed(self) -> float:
         """Return the Euclidean norm of the translational velocity."""
